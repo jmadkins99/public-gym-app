@@ -17,6 +17,22 @@ A fully customizable workout tracking web application for experienced lifters. S
 - Updating core app to use custom workout schedules
 - Dynamic day rendering (removing hardcoded Day 1/Day 2)
 - Full integration of customizable exercise system
+- Refactor WorkoutView, WeeklyView, ProgressView, and SettingsModal for 1-7 day support
+
+**Phase 3: Custom Exercise Types** ⏳ Planned
+- Exercise Type Manager UI for creating/editing custom exercise types
+- Field builder (add/remove/reorder fields, set input types)
+- Display format customization
+- Dynamic exercise rendering for any field configuration
+- Generic chart support for custom numeric fields
+- Examples: Bodyweight (reps only), Cardio (duration/distance/level), Isometric (time held)
+
+**Phase 4: Polish & Testing** ⏳ Planned
+- Comprehensive testing (migration, custom types, all schedule configurations)
+- Mobile responsiveness optimization
+- In-app documentation and tooltips
+- "What's New" modal for migrated users
+- User guide for customization features
 
 ## Features
 
