@@ -782,58 +782,6 @@
         // User bodyweight for bodyweight exercises
         const userBodyweight = 185;
 
-        // Week 1 default weights
-        const WEEK_1_DEFAULTS = {
-            'chest-flies': '165',
-            'incline-chest-press': '110',
-            'flat-chest-press': '135',
-            'shoulder-press': '126.25',
-            'preacher-curls': '56.25',
-            'tricep-pushdown': '36.25',
-            'lateral-raises': '27.5',
-            'overhead-tricep': '27.5',
-            'upper-back-row': '190',
-            'kelso-shrugs': '190',
-            'frontal-pulldowns': '180',
-            'hammer-row': '117.5',
-            'leg-extensions': '240',
-            'leg-curls': '150',
-            'hip-adduction': '120',
-            'calf-raise': '180',
-            'cable-wrist-curls': '87.5',
-            'ab-crunch': '140',
-            'hanging-leg-raises': 'Body Weight'
-        };
-
-        const DEFAULT_DAY_1_EXERCISES = [
-            // Upper
-            { id: 'chest-flies', name: 'Chest Flies', category: 'Upper', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 0 },
-            { id: 'incline-chest-press', name: 'Incline Chest Press Machine', category: 'Upper', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 1 },
-            { id: 'flat-chest-press', name: 'Flat Chest Press Machine', category: 'Upper', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 2 },
-            { id: 'shoulder-press', name: 'Shoulder Press Machine', category: 'Upper', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 3 },
-            { id: 'preacher-curls', name: 'Preacher Curls', category: 'Upper', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 4 },
-            { id: 'tricep-pushdown', name: 'Cuffed Tricep Pushdown', category: 'Upper', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 5 },
-            { id: 'lateral-raises', name: 'Cuffed Cable Lateral Raises', category: 'Upper', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 6 },
-            { id: 'overhead-tricep', name: 'Cuffed Overhead Tricep Extension', category: 'Upper', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 7 },
-            { id: 'upper-back-row', name: 'Upper Back Row Machine', category: 'Upper', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 8 },
-            { id: 'kelso-shrugs', name: 'Machine Kelso Shrugs', category: 'Upper', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 9 },
-            { id: 'frontal-pulldowns', name: 'Frontal Plane Pulldowns', category: 'Upper', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 10 },
-            { id: 'hammer-row', name: 'Seated Row Machine', category: 'Upper', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 11 },
-            // Lower
-            { id: 'leg-extensions', name: 'Leg Extensions', category: 'Lower', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 12 },
-            { id: 'leg-curls', name: 'Prone Leg Curls', category: 'Lower', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 13 },
-            { id: 'hip-adduction', name: 'Hip Adduction Machine', category: 'Lower', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 14 },
-            { id: 'calf-raise', name: 'Seated Calf Raise Machine', category: 'Lower', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 15 },
-            { id: 'assault-bike', name: 'Assault Bike', category: 'Cardio', type: 'assault-bike', sets: 1, minReps: 5, maxReps: 10, order: 16 },
-        ];
-
-        const DEFAULT_DAY_2_EXERCISES = [
-            { id: 'cable-wrist-curls', name: 'Cable Wrist Curls', category: 'Accessories', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 0 },
-            { id: 'ab-crunch', name: 'Ab Crunch Machine', category: 'Accessories', type: 'standard', sets: 3, minReps: 8, maxReps: 12, order: 1 },
-            { id: 'hanging-leg-raises', name: 'Hanging Leg Raises', category: 'Accessories', type: 'bodyweight', sets: 3, minReps: 8, maxReps: 12, order: 2 },
-            { id: 'stairmaster', name: 'StairMaster', category: 'Cardio', type: 'stairmaster', sets: 1, minReps: 10, maxReps: 20, order: 3 },
-        ];
-
         // Calculate which day it should be based on the date
         function getTodayDay() {
             // Load schedule from localStorage
@@ -1596,10 +1544,10 @@
             const newConfig = {
                 version: 2,
                 days: {
-                    1: config.day1 || DEFAULT_DAY_1_EXERCISES,
-                    2: config.day2 || DEFAULT_DAY_2_EXERCISES
+                    1: config.day1 || [],
+                    2: config.day2 || []
                 },
-                categories: ['Upper', 'Lower', 'Accessories', 'Cardio']
+                categories: config.categories || []
             };
 
             localStorage.setItem('gymExerciseConfig', JSON.stringify(newConfig));
@@ -1677,13 +1625,10 @@
             const [workoutHistory, setWorkoutHistory] = useState([]);
             const [showSuccess, setShowSuccess] = useState(false);
             const [successMessage, setSuccessMessage] = useState('');
-            const [exercisesByDay, setExercisesByDay] = useState({
-                1: DEFAULT_DAY_1_EXERCISES,
-                2: DEFAULT_DAY_2_EXERCISES
-            });
+            const [exercisesByDay, setExercisesByDay] = useState({});
             const [schedule, setSchedule] = useState(null);
             const [exerciseCategories, setExerciseCategories] = useState([]);
-            const [selectedExercise, setSelectedExercise] = useState(DEFAULT_DAY_1_EXERCISES[0].id);
+            const [selectedExercise, setSelectedExercise] = useState('');
             const [celebration, setCelebration] = useState(null);
             const [showSettings, setShowSettings] = useState(false);
             const [showBackupReminder, setShowBackupReminder] = useState(false);
@@ -1750,6 +1695,12 @@
                         });
                         setExercisesByDay(sortedDays);
 
+                        // Set first exercise as selected for progress view
+                        const allExercises = Object.values(sortedDays).flat();
+                        if (allExercises.length > 0 && !selectedExercise) {
+                            setSelectedExercise(allExercises[0].id);
+                        }
+
                         if (config.categories) {
                             setExerciseCategories(config.categories);
                         }
@@ -1764,6 +1715,12 @@
                             days[2] = config.day2.sort((a, b) => a.order - b.order);
                         }
                         setExercisesByDay(days);
+
+                        // Set first exercise as selected for progress view
+                        const allExercises = Object.values(days).flat();
+                        if (allExercises.length > 0 && !selectedExercise) {
+                            setSelectedExercise(allExercises[0].id);
+                        }
                     }
                 }
 
@@ -1981,10 +1938,9 @@
                 let finalData = { ...data };
                 if (exercise.type === 'standard' && !data.weight && data.reps) {
                     const previous = getPreviousWorkout(exerciseId);
-                    const defaultWeight = currentWeek === 1 && !previous ? WEEK_1_DEFAULTS[exerciseId] : null;
                     const isPROpportunity = previous && parseInt(previous.reps) >= 8;
                     const suggestedWeight = isPROpportunity ? (parseFloat(previous.weight) + 1.25).toFixed(2) : null;
-                    finalData.weight = suggestedWeight || previous?.weight || defaultWeight || '0';
+                    finalData.weight = suggestedWeight || previous?.weight || '0';
                 }
 
                 const timestamp = new Date().toISOString();
@@ -2270,10 +2226,7 @@
                         setWorkoutHistory([]);
                         setWorkoutData({});
                         setLoggedExercises({});
-                        setExercisesByDay({
-                            1: DEFAULT_DAY_1_EXERCISES,
-                            2: DEFAULT_DAY_2_EXERCISES
-                        });
+                        setExercisesByDay({});
                         setSchedule(null);
                         setExerciseCategories([]);
                         setShowSettings(false);
@@ -3024,9 +2977,6 @@
                 const isLogged = loggedExercises[exercise.id];
                 const data = workoutData[exercise.id] || {};
 
-                // Get default weight for Week 1
-                const defaultWeight = currentWeek === 1 && !previous ? WEEK_1_DEFAULTS[exercise.id] : null;
-
                 if (exercise.type === 'assault-bike') {
                     const isPROpportunity = previous && previous.rounds;
                     const suggestedRounds = isPROpportunity ? (parseInt(previous.rounds) + 1).toString() : null;
@@ -3236,7 +3186,7 @@
                 const isCurrentlyPRAttempt = isPROpportunity && data.weight &&
                     parseFloat(data.weight) >= parseFloat(suggestedWeight);
 
-                const placeholderWeight = suggestedWeight || previous?.weight || defaultWeight || '0';
+                const placeholderWeight = suggestedWeight || previous?.weight || '0';
                 // If it's a PR opportunity (adding 1.25 lbs), keep reps at 6
                 // Otherwise, aim for one rep higher than last week
                 const placeholderReps = isPROpportunity ? '6' : (previous ? (previousReps + 1).toString() : '0');

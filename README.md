@@ -79,21 +79,16 @@ Simply open `index.html` in a web browser. No build process or dependencies requ
 3. ⏳ Phase 3: Custom exercise types system
 4. ⏳ Phase 4: Polish and mobile optimization
 
-## Technical Debt / Cleanup Needed
+## Recent Cleanup (Completed)
 
-**IMPORTANT**: The following legacy code from the personal version needs to be removed:
+All legacy personal workout data has been removed from the codebase:
+- ✅ Removed `DEFAULT_DAY_1_EXERCISES` and `DEFAULT_DAY_2_EXERCISES` hardcoded exercises
+- ✅ Removed `WEEK_1_DEFAULTS` personal weight values
+- ✅ Updated all code to use wizard-generated configurations
+- ✅ App now requires wizard setup for all new users
+- ✅ No personal workout data embedded in code
 
-- `DEFAULT_DAY_1_EXERCISES` and `DEFAULT_DAY_2_EXERCISES` constants (lines ~808-835)
-  - These are hardcoded exercises from the personal app
-  - Should be replaced with generic defaults or removed entirely
-- `WEEK_1_DEFAULTS` weight values (lines ~786-806)
-  - Personal default weights for Week 1
-  - Should be removed or made configurable
-- Legacy migration functions that reference old personal data structure
-- Any hardcoded personal exercise IDs, names, or categories
-- Cleanup fallback code that assumes 2-day split (should default to wizard-created config)
-
-This cleanup will make the app truly generic and ready for public use without any personal workout data embedded in the code.
+The app is now fully generic and ready for public use!
 
 ## License
 
