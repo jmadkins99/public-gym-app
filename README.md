@@ -13,11 +13,18 @@ A fully customizable workout tracking web application for experienced lifters. S
 - Data migration for existing users
 - Backup/restore functionality
 
-**Phase 2: Main App Refactor** 🚧 In Progress
-- Updating core app to use custom workout schedules
-- Dynamic day rendering (removing hardcoded Day 1/Day 2)
+**Phase 2: Main App Refactor** ✅ Complete
+- Core app now uses custom workout schedules from wizard
+- Dynamic day rendering (1-7 workout days supported)
 - Full integration of customizable exercise system
-- Refactor WorkoutView, WeeklyView, ProgressView, and SettingsModal for 1-7 day support
+- Refactored WorkoutView, WeeklyView, ProgressView, and SettingsModal for dynamic day support
+- All localStorage operations use version 2 format (backward compatible)
+- Dynamic category rendering based on exercise configuration
+- Custom day names displayed instead of "Day 1", "Day 2"
+- Sets and rep ranges (e.g., "3 sets × 8-12 reps") configurable per exercise in wizard
+- Goal reminders displayed on exercise cards during workout
+- Auto-selects first workout day on app load
+- Help modal with examples in wizard
 
 **Phase 3: Custom Exercise Types** ⏳ Planned
 - Exercise Type Manager UI for creating/editing custom exercise types
@@ -36,20 +43,23 @@ A fully customizable workout tracking web application for experienced lifters. S
 
 ## Features
 
-### Current (Wizard Only)
+### Current Features
 - **Custom Schedules**: Define which days of the week you work out (1-7 days)
 - **Flexible Programming**: Create unique workout days or repeat the same workout multiple times per week
 - **Exercise Library**: Autocomplete dropdown with 70+ common exercises, or add your own
-- **Category Organization**: Group exercises by muscle groups (Upper, Lower, Push, Pull, etc.)
-- **Data Persistence**: All data stored locally in your browser
-- **Backup/Restore**: Export and import your workout data
-
-### Planned (Phase 2+)
+- **Dynamic Category Organization**: Exercises automatically grouped by categories (Upper, Lower, Push, Pull, etc.)
 - **PR Tracking**: Automatic personal record detection and suggestions
 - **Progress Charts**: Visual progress tracking for all exercises
 - **Weekly History**: Complete workout history with calendar view
+- **Exercise Management**: Rename exercises and reorder them per day
+- **Data Persistence**: All data stored locally in your browser
+- **Backup/Restore**: Export and import your workout data (includes schedule and configuration)
+
+### Planned (Phase 3+)
 - **Custom Exercise Types**: Define exercises beyond standard weight/reps (bodyweight, cardio, etc.)
-- Full mobile responsiveness
+- **Field Builder**: Add/remove/reorder fields for custom exercise types
+- Full mobile responsiveness optimization
+- In-app documentation and tooltips
 
 ## Tech Stack
 
@@ -65,9 +75,25 @@ Simply open `index.html` in a web browser. No build process or dependencies requ
 ## Development Roadmap
 
 1. ✅ Phase 1: Setup wizard and foundation
-2. 🚧 Phase 2: Core app refactoring for custom schedules
+2. ✅ Phase 2: Core app refactoring for custom schedules
 3. ⏳ Phase 3: Custom exercise types system
 4. ⏳ Phase 4: Polish and mobile optimization
+
+## Technical Debt / Cleanup Needed
+
+**IMPORTANT**: The following legacy code from the personal version needs to be removed:
+
+- `DEFAULT_DAY_1_EXERCISES` and `DEFAULT_DAY_2_EXERCISES` constants (lines ~808-835)
+  - These are hardcoded exercises from the personal app
+  - Should be replaced with generic defaults or removed entirely
+- `WEEK_1_DEFAULTS` weight values (lines ~786-806)
+  - Personal default weights for Week 1
+  - Should be removed or made configurable
+- Legacy migration functions that reference old personal data structure
+- Any hardcoded personal exercise IDs, names, or categories
+- Cleanup fallback code that assumes 2-day split (should default to wizard-created config)
+
+This cleanup will make the app truly generic and ready for public use without any personal workout data embedded in the code.
 
 ## License
 
