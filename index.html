@@ -1684,6 +1684,7 @@
             const [celebration, setCelebration] = useState(null);
             const [showSettings, setShowSettings] = useState(false);
             const [showBackupReminder, setShowBackupReminder] = useState(false);
+            const [showTutorial, setShowTutorial] = useState(false);
             const [showDayBreakdown, setShowDayBreakdown] = useState(false);
             const [showEditWorkout, setShowEditWorkout] = useState(false);
             const [editingWorkout, setEditingWorkout] = useState(null);
@@ -2252,6 +2253,17 @@
             const dismissBackupReminder = () => {
                 localStorage.setItem('lastBackupReminder', new Date().getTime().toString());
                 setShowBackupReminder(false);
+
+                // Show tutorial on first time
+                const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
+                if (!hasSeenTutorial) {
+                    setShowTutorial(true);
+                }
+            };
+
+            const dismissTutorial = () => {
+                localStorage.setItem('hasSeenTutorial', 'true');
+                setShowTutorial(false);
             };
 
             return (
@@ -2273,6 +2285,10 @@
                             onExport={() => { exportData(); dismissBackupReminder(); }}
                             onDismiss={dismissBackupReminder}
                         />
+                    )}
+
+                    {showTutorial && (
+                        <TutorialModal onDismiss={dismissTutorial} />
                     )}
 
                     {showSettings && (
@@ -2403,6 +2419,107 @@
                         </button>
                         <button className="modal-btn" onClick={onDismiss}>
                             Remind Me Later
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        function TutorialModal({ onDismiss }) {
+            return (
+                <div className="modal-overlay">
+                    <div className="modal" style={{ maxWidth: '500px' }}>
+                        <div className="modal-title">🏋️ Quick Start Guide</div>
+                        <p style={{ color: '#888', marginBottom: '30px', fontSize: '14px', lineHeight: '1.6' }}>
+                            Welcome! Here's how to track your workouts:
+                        </p>
+
+                        {/* Step 1 */}
+                        <div style={{ marginBottom: '25px', padding: '20px', background: '#1a1a2a', borderRadius: '12px', border: '2px solid #2a2a3a' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #3a2a5a, #4a3a6a)',
+                                    borderRadius: '50%',
+                                    width: '32px',
+                                    height: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#fff',
+                                    fontWeight: 'bold',
+                                    fontSize: '16px'
+                                }}>1</div>
+                                <div style={{ color: '#b8b8d0', fontWeight: '600', fontSize: '16px' }}>Enter Your Data</div>
+                            </div>
+                            <div style={{ color: '#8a8aa0', fontSize: '14px', lineHeight: '1.5', paddingLeft: '44px' }}>
+                                Fill in the <strong style={{ color: '#b8b8d0' }}>weight and reps</strong> for each exercise you completed.
+                            </div>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div style={{ marginBottom: '25px', padding: '20px', background: '#1a1a2a', borderRadius: '12px', border: '2px solid #2a2a3a' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #3a2a5a, #4a3a6a)',
+                                    borderRadius: '50%',
+                                    width: '32px',
+                                    height: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#fff',
+                                    fontWeight: 'bold',
+                                    fontSize: '16px'
+                                }}>2</div>
+                                <div style={{ color: '#b8b8d0', fontWeight: '600', fontSize: '16px' }}>Tap LOG</div>
+                            </div>
+                            <div style={{ color: '#8a8aa0', fontSize: '14px', lineHeight: '1.5', paddingLeft: '44px' }}>
+                                Press the <strong style={{ color: '#b8b8d0' }}>LOG</strong> button for each exercise to save your set.
+                                <div style={{ marginTop: '8px', fontSize: '12px', color: '#6a5a8a' }}>
+                                    ↳ The button will show <span style={{ color: '#8aaa8a' }}>✓ Logged</span> when saved
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Step 3 */}
+                        <div style={{ marginBottom: '25px', padding: '20px', background: '#1a1a2a', borderRadius: '12px', border: '2px solid #2a2a3a' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #3a2a5a, #4a3a6a)',
+                                    borderRadius: '50%',
+                                    width: '32px',
+                                    height: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#fff',
+                                    fontWeight: 'bold',
+                                    fontSize: '16px'
+                                }}>3</div>
+                                <div style={{ color: '#b8b8d0', fontWeight: '600', fontSize: '16px' }}>Submit Your Day</div>
+                            </div>
+                            <div style={{ color: '#8a8aa0', fontSize: '14px', lineHeight: '1.5', paddingLeft: '44px' }}>
+                                When you're done logging all exercises, tap <strong style={{ color: '#b8b8d0' }}>Submit Day and View Breakdown</strong> at the bottom.
+                                <div style={{ marginTop: '8px', fontSize: '12px', color: '#6a5a8a' }}>
+                                    ↳ This locks your workout and shows your progress summary
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{
+                            padding: '15px',
+                            background: '#0d0d1a',
+                            borderRadius: '8px',
+                            marginBottom: '20px',
+                            border: '1px solid #3a2a5a'
+                        }}>
+                            <div style={{ color: '#8a7aaa', fontSize: '13px', lineHeight: '1.5' }}>
+                                💡 <strong style={{ color: '#b8b8d0' }}>Tip:</strong> You can view past workouts in the <strong>Weekly</strong> tab and track progress in the <strong>Progress</strong> tab.
+                            </div>
+                        </div>
+
+                        <button className="modal-btn primary" onClick={onDismiss} style={{ width: '100%' }}>
+                            Got It!
                         </button>
                     </div>
                 </div>
