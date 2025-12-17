@@ -668,23 +668,24 @@
             color: #6a5a8a;
         }
 
-        /* Mobile responsive calendar */
+        /* Mobile responsive calendar - 2 rows */
         @media (max-width: 768px) {
             .calendar-grid {
-                gap: 4px;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
             }
 
             .calendar-day {
-                padding: 6px;
+                padding: 10px;
             }
 
             .calendar-day-name {
-                font-size: 9px;
-                margin-bottom: 2px;
+                font-size: 10px;
+                margin-bottom: 3px;
             }
 
             .calendar-day-number {
-                font-size: 14px;
+                font-size: 16px;
             }
         }
 
