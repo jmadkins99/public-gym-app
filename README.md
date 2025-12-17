@@ -25,6 +25,8 @@ A fully customizable workout tracking web application for experienced lifters. S
 - Goal reminders displayed on exercise cards during workout
 - Auto-selects first workout day on app load
 - Help modal with examples in wizard
+- Cardio exercise detection with Intensity (Level 1-15) and Time fields
+- Removed all PR suggestion mechanics (now pure tracking app)
 
 **Phase 3: Custom Exercise Types** ⏳ Planned
 - Exercise Type Manager UI for creating/editing custom exercise types
@@ -79,9 +81,15 @@ Simply open `index.html` in a web browser. No build process or dependencies requ
 3. ⏳ Phase 3: Custom exercise types system
 4. ⏳ Phase 4: Polish and mobile optimization
 
-## Recent Cleanup (Completed)
+## Recent Changes
 
-All legacy personal workout data has been removed from the codebase:
+**Latest Updates:**
+- ✅ Cardio exercise detection and custom fields (Intensity: Level 1-15, Time dropdown)
+- ✅ Removed all PR suggestion mechanics (+1.25 lbs, auto-weight calculations)
+- ✅ Fixed workout submission logic to allow logging next day's workout
+- ✅ App is now a pure tracking tool without autoregulation
+
+**Previous Cleanup:**
 - ✅ Removed `DEFAULT_DAY_1_EXERCISES` and `DEFAULT_DAY_2_EXERCISES` hardcoded exercises
 - ✅ Removed `WEEK_1_DEFAULTS` personal weight values
 - ✅ Updated all code to use wizard-generated configurations
