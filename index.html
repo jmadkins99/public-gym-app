@@ -102,6 +102,7 @@
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }
 
         .day-btn {
@@ -697,6 +698,13 @@
             /* Build Your Workouts exercise rows - stack inputs below exercise name on mobile */
             .wizard-exercise-row > div:first-child {
                 margin-bottom: 8px;
+            }
+
+            /* Workout page day selector - wrap to 2 rows on mobile */
+            .day-btn {
+                flex: 1 1 calc(25% - 8px);
+                min-width: calc(25% - 8px);
+                max-width: calc(25% - 8px);
             }
         }
 
