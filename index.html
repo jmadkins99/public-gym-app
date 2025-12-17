@@ -693,6 +693,11 @@
                 flex: 1 1 calc(33.333% - 6px);
                 max-width: calc(33.333% - 6px);
             }
+
+            /* Build Your Workouts exercise rows - stack inputs below exercise name on mobile */
+            .wizard-exercise-row > div:first-child {
+                margin-bottom: 8px;
+            }
         }
 
         .wizard-buttons {
@@ -1314,9 +1319,18 @@
                                                 </div>
                                             )}
                                             {currentDay.exercises.map((ex, idx) => (
-                                                <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '8px', background: '#0d0d1a', borderRadius: '4px', marginBottom: '6px' }}>
-                                                    <span style={{ color: '#b8b8d0', minWidth: '160px', flex: '0 0 auto' }}>{idx + 1}. {ex.name}</span>
-                                                    <input
+                                                <div key={idx} className="wizard-exercise-row" style={{ padding: '8px', background: '#0d0d1a', borderRadius: '4px', marginBottom: '6px' }}>
+                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0' }}>
+                                                        <span style={{ color: '#b8b8d0', flex: '1' }}>{idx + 1}. {ex.name}</span>
+                                                        <button
+                                                            onClick={() => removeExercise(selectedDay, idx)}
+                                                            style={{ background: 'none', border: 'none', color: '#8a5a5a', cursor: 'pointer', fontSize: '18px' }}
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                    <div className="wizard-exercise-inputs" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                        <input
                                                         type="number"
                                                         value={ex.sets || 3}
                                                         onChange={(e) => updateExerciseField(selectedDay, idx, 'sets', parseInt(e.target.value) || 0)}
@@ -1368,12 +1382,7 @@
                                                         }}
                                                         title="Maximum Reps"
                                                     />
-                                                    <button
-                                                        onClick={() => removeExercise(selectedDay, idx)}
-                                                        style={{ background: 'none', border: 'none', color: '#8a5a5a', cursor: 'pointer', fontSize: '18px', marginLeft: 'auto' }}
-                                                    >
-                                                        ×
-                                                    </button>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
