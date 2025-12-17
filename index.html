@@ -1204,6 +1204,19 @@
             };
 
             const hasAtLeastOneExercise = Object.values(workoutDays).some(day => day.exercises.length > 0);
+            const allDaysHaveExercises = Object.values(workoutDays).every(day => day.exercises.length > 0);
+
+            const handleContinue = () => {
+                if (allDaysHaveExercises) {
+                    onNext(workoutDays);
+                } else {
+                    // Find first day without exercises and switch to it
+                    const emptyDay = Object.keys(workoutDays).find(dayNum => workoutDays[dayNum].exercises.length === 0);
+                    if (emptyDay) {
+                        setSelectedDay(parseInt(emptyDay));
+                    }
+                }
+            };
 
             const dayLabels = schedule.workoutDays
                 .filter(d => d.workoutDayNumber === selectedDay)
@@ -1441,7 +1454,7 @@
 
                     <div className="wizard-buttons">
                         <button className="wizard-btn secondary" onClick={onBack}>Back</button>
-                        <button className="wizard-btn" onClick={() => onNext(workoutDays)} disabled={!hasAtLeastOneExercise}>
+                        <button className="wizard-btn" onClick={handleContinue} disabled={!hasAtLeastOneExercise}>
                             Continue
                         </button>
                     </div>
@@ -1556,7 +1569,7 @@
                         </div>
 
                         <div style={{ fontSize: '14px', color: '#6a5a8a', marginTop: '20px', lineHeight: '1.6' }}>
-                            You can customize exercises, add new ones, or change your schedule anytime in Settings ⚙️
+                            You can customize exercise order and exercise names anytime in Settings ⚙️
                         </div>
                     </div>
 
