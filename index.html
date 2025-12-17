@@ -687,6 +687,12 @@
             .calendar-day-number {
                 font-size: 16px;
             }
+
+            /* Build Your Workouts day selector - wrap to 2 rows on mobile */
+            .workout-day-selector button {
+                flex: 1 1 calc(33.333% - 6px);
+                max-width: calc(33.333% - 6px);
+            }
         }
 
         .wizard-buttons {
@@ -1239,7 +1245,7 @@
 
                     <div className="wizard-content" style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
                                 {/* Day selector tabs */}
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                                <div className="workout-day-selector" style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
                                     {uniqueDays.map(dayNum => {
                                         const labels = schedule.workoutDays
                                             .filter(d => d.workoutDayNumber === dayNum)
@@ -1251,6 +1257,7 @@
                                                 onClick={() => setSelectedDay(dayNum)}
                                                 style={{
                                                     flex: 1,
+                                                    minWidth: '100px',
                                                     padding: '12px',
                                                     background: selectedDay === dayNum ? '#3a2a5a' : '#1a1a2a',
                                                     border: `2px solid ${selectedDay === dayNum ? '#4a3a6a' : '#2a2a3a'}`,
