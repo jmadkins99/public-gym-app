@@ -1306,10 +1306,6 @@
                                         {currentDay.exercises.length > 0 && (
                                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '6px 8px', marginBottom: '6px' }}>
                                                 <span style={{ minWidth: '160px', flex: '0 0 auto', fontSize: '11px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Exercise Name</span>
-                                                <span style={{ width: '60px', fontSize: '11px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Sets</span>
-                                                <span style={{ width: '60px', fontSize: '11px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Min</span>
-                                                <span style={{ width: '10px' }}></span>
-                                                <span style={{ width: '60px', fontSize: '11px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Max</span>
                                             </div>
                                         )}
                                         <div style={{ background: '#1a1a2a', borderRadius: '8px', padding: '12px', minHeight: '100px' }}>
@@ -1329,59 +1325,68 @@
                                                             ×
                                                         </button>
                                                     </div>
-                                                    <div className="wizard-exercise-inputs" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                        <input
-                                                        type="number"
-                                                        value={ex.sets || 3}
-                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'sets', parseInt(e.target.value) || 0)}
-                                                        placeholder="Sets"
-                                                        style={{
-                                                            width: '60px',
-                                                            padding: '6px',
-                                                            background: '#1a1a2a',
-                                                            border: '1px solid #2a2a3a',
-                                                            borderRadius: '4px',
-                                                            color: '#b8b8d0',
-                                                            fontSize: '14px',
-                                                            textAlign: 'center'
-                                                        }}
-                                                        title="Sets"
-                                                    />
-                                                    <input
-                                                        type="number"
-                                                        value={ex.minReps || 8}
-                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'minReps', parseInt(e.target.value) || 0)}
-                                                        placeholder="Min"
-                                                        style={{
-                                                            width: '60px',
-                                                            padding: '6px',
-                                                            background: '#1a1a2a',
-                                                            border: '1px solid #2a2a3a',
-                                                            borderRadius: '4px',
-                                                            color: '#b8b8d0',
-                                                            fontSize: '14px',
-                                                            textAlign: 'center'
-                                                        }}
-                                                        title="Minimum Reps"
-                                                    />
-                                                    <span style={{ color: '#6a5a8a' }}>-</span>
-                                                    <input
-                                                        type="number"
-                                                        value={ex.maxReps || 12}
-                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'maxReps', parseInt(e.target.value) || 0)}
-                                                        placeholder="Max"
-                                                        style={{
-                                                            width: '60px',
-                                                            padding: '6px',
-                                                            background: '#1a1a2a',
-                                                            border: '1px solid #2a2a3a',
-                                                            borderRadius: '4px',
-                                                            color: '#b8b8d0',
-                                                            fontSize: '14px',
-                                                            textAlign: 'center'
-                                                        }}
-                                                        title="Maximum Reps"
-                                                    />
+                                                    <div className="wizard-exercise-inputs" style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                            <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Sets</span>
+                                                            <input
+                                                                type="number"
+                                                                value={ex.sets || 3}
+                                                                onChange={(e) => updateExerciseField(selectedDay, idx, 'sets', parseInt(e.target.value) || 0)}
+                                                                placeholder="Sets"
+                                                                style={{
+                                                                    width: '60px',
+                                                                    padding: '6px',
+                                                                    background: '#1a1a2a',
+                                                                    border: '1px solid #2a2a3a',
+                                                                    borderRadius: '4px',
+                                                                    color: '#b8b8d0',
+                                                                    fontSize: '14px',
+                                                                    textAlign: 'center'
+                                                                }}
+                                                                title="Sets"
+                                                            />
+                                                        </div>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                            <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Min</span>
+                                                            <input
+                                                                type="number"
+                                                                value={ex.minReps || 8}
+                                                                onChange={(e) => updateExerciseField(selectedDay, idx, 'minReps', parseInt(e.target.value) || 0)}
+                                                                placeholder="Min"
+                                                                style={{
+                                                                    width: '60px',
+                                                                    padding: '6px',
+                                                                    background: '#1a1a2a',
+                                                                    border: '1px solid #2a2a3a',
+                                                                    borderRadius: '4px',
+                                                                    color: '#b8b8d0',
+                                                                    fontSize: '14px',
+                                                                    textAlign: 'center'
+                                                                }}
+                                                                title="Minimum Reps"
+                                                            />
+                                                        </div>
+                                                        <span style={{ color: '#6a5a8a', paddingBottom: '6px' }}>-</span>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                            <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Max</span>
+                                                            <input
+                                                                type="number"
+                                                                value={ex.maxReps || 12}
+                                                                onChange={(e) => updateExerciseField(selectedDay, idx, 'maxReps', parseInt(e.target.value) || 0)}
+                                                                placeholder="Max"
+                                                                style={{
+                                                                    width: '60px',
+                                                                    padding: '6px',
+                                                                    background: '#1a1a2a',
+                                                                    border: '1px solid #2a2a3a',
+                                                                    borderRadius: '4px',
+                                                                    color: '#b8b8d0',
+                                                                    fontSize: '14px',
+                                                                    textAlign: 'center'
+                                                                }}
+                                                                title="Maximum Reps"
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}
