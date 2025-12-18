@@ -1264,9 +1264,14 @@
 
             const updateExerciseField = (dayNum, exerciseIndex, field, value) => {
                 const updatedExercises = [...workoutDays[dayNum].exercises];
+                // For numeric fields, allow empty string temporarily so user can clear and retype
+                const processedValue = (field === 'sets' || field === 'minReps' || field === 'maxReps' || field === 'minutes' || field === 'seconds')
+                    ? (value === '' ? '' : (parseInt(value) || 0))
+                    : value;
+
                 updatedExercises[exerciseIndex] = {
                     ...updatedExercises[exerciseIndex],
-                    [field]: value
+                    [field]: processedValue
                 };
                 setWorkoutDays({
                     ...workoutDays,
@@ -1283,6 +1288,30 @@
                     [dayNum]: {
                         ...workoutDays[dayNum],
                         exercises: workoutDays[dayNum].exercises.filter((_, i) => i !== index)
+                    }
+                });
+            };
+
+            const moveExercise = (dayNum, exerciseIndex, direction) => {
+                const exercises = workoutDays[dayNum].exercises;
+
+                // Prevent moving beyond boundaries
+                if (direction === 'up' && exerciseIndex === 0) return;
+                if (direction === 'down' && exerciseIndex === exercises.length - 1) return;
+
+                // Calculate new index
+                const newIndex = direction === 'up' ? exerciseIndex - 1 : exerciseIndex + 1;
+
+                // Create a copy and swap exercises
+                const reordered = [...exercises];
+                [reordered[exerciseIndex], reordered[newIndex]] = [reordered[newIndex], reordered[exerciseIndex]];
+
+                // Update state with reordered exercises
+                setWorkoutDays({
+                    ...workoutDays,
+                    [dayNum]: {
+                        ...workoutDays[dayNum],
+                        exercises: reordered
                     }
                 });
             };
@@ -1456,8 +1485,41 @@
                                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0' }}>
                                                         <span style={{ color: '#b8b8d0', flex: '1' }}>{idx + 1}. {ex.name}</span>
                                                         <button
+                                                            onClick={() => moveExercise(selectedDay, idx, 'up')}
+                                                            disabled={idx === 0}
+                                                            style={{
+                                                                padding: '4px 8px',
+                                                                background: idx === 0 ? '#0d0d1a' : '#1a1a2a',
+                                                                border: '1px solid #2a2a3a',
+                                                                borderRadius: '4px',
+                                                                color: idx === 0 ? '#555' : '#8a8aa0',
+                                                                cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                                                                fontSize: '14px'
+                                                            }}
+                                                            title="Move up"
+                                                        >
+                                                            ↑
+                                                        </button>
+                                                        <button
+                                                            onClick={() => moveExercise(selectedDay, idx, 'down')}
+                                                            disabled={idx === currentDay.exercises.length - 1}
+                                                            style={{
+                                                                padding: '4px 8px',
+                                                                background: idx === currentDay.exercises.length - 1 ? '#0d0d1a' : '#1a1a2a',
+                                                                border: '1px solid #2a2a3a',
+                                                                borderRadius: '4px',
+                                                                color: idx === currentDay.exercises.length - 1 ? '#555' : '#8a8aa0',
+                                                                cursor: idx === currentDay.exercises.length - 1 ? 'not-allowed' : 'pointer',
+                                                                fontSize: '14px'
+                                                            }}
+                                                            title="Move down"
+                                                        >
+                                                            ↓
+                                                        </button>
+                                                        <button
                                                             onClick={() => removeExercise(selectedDay, idx)}
                                                             style={{ background: 'none', border: 'none', color: '#8a5a5a', cursor: 'pointer', fontSize: '18px' }}
+                                                            title="Remove exercise"
                                                         >
                                                             ×
                                                         </button>
@@ -1498,9 +1560,9 @@
                                                                     <span style={{ fontSize: '10px', color: validationErrors[`${selectedDay}-${idx}-minutes`] ? '#ff5555' : '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Minutes</span>
                                                                     <input
                                                                         type="number"
-                                                                        value={ex.minutes || 0}
+                                                                        value={ex.minutes === '' ? '' : (ex.minutes || 0)}
                                                                         onChange={(e) => {
-                                                                            updateExerciseField(selectedDay, idx, 'minutes', parseInt(e.target.value) || 0);
+                                                                            updateExerciseField(selectedDay, idx, 'minutes', e.target.value);
                                                                             // Clear validation error when user types
                                                                             if (validationErrors[`${selectedDay}-${idx}-minutes`]) {
                                                                                 const newErrors = { ...validationErrors };
@@ -1528,8 +1590,8 @@
                                                                     <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Seconds</span>
                                                                     <input
                                                                         type="number"
-                                                                        value={ex.seconds || 0}
-                                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'seconds', parseInt(e.target.value) || 0)}
+                                                                        value={ex.seconds === '' ? '' : (ex.seconds || 0)}
+                                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'seconds', e.target.value)}
                                                                         placeholder="0"
                                                                         min="0"
                                                                         max="59"
@@ -1554,8 +1616,8 @@
                                                                     <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Sets</span>
                                                                     <input
                                                                         type="number"
-                                                                        value={ex.sets || 3}
-                                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'sets', parseInt(e.target.value) || 0)}
+                                                                        value={ex.sets === '' ? '' : (ex.sets || 3)}
+                                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'sets', e.target.value)}
                                                                         placeholder="Sets"
                                                                         style={{
                                                                             width: '60px',
@@ -1575,8 +1637,8 @@
                                                                     <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Min</span>
                                                                     <input
                                                                         type="number"
-                                                                        value={ex.minReps || 8}
-                                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'minReps', parseInt(e.target.value) || 0)}
+                                                                        value={ex.minReps === '' ? '' : (ex.minReps || 8)}
+                                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'minReps', e.target.value)}
                                                                         placeholder="Min"
                                                                         style={{
                                                                             width: '60px',
@@ -1597,8 +1659,8 @@
                                                                     <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Max</span>
                                                                     <input
                                                                         type="number"
-                                                                        value={ex.maxReps || 12}
-                                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'maxReps', parseInt(e.target.value) || 0)}
+                                                                        value={ex.maxReps === '' ? '' : (ex.maxReps || 12)}
+                                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'maxReps', e.target.value)}
                                                                         placeholder="Max"
                                                                         style={{
                                                                             width: '60px',
@@ -2107,12 +2169,12 @@
                 storage.setItem('gymExerciseConfig', JSON.stringify(config));
             };
 
-            const updateExerciseName = (day, exerciseId, newName) => {
+            const updateExerciseName = (day, exerciseId, newName, additionalProps = {}) => {
                 setExercisesByDay(prev => {
                     const updated = {
                         ...prev,
                         [day]: prev[day].map(ex =>
-                            ex.id === exerciseId ? { ...ex, name: newName } : ex
+                            ex.id === exerciseId ? { ...ex, name: newName, ...additionalProps } : ex
                         )
                     };
                     // Save immediately
@@ -2660,19 +2722,19 @@
                         <div className="nav">
                             <button
                                 className={`nav-btn ${currentView === 'workout' ? 'active' : ''}`}
-                                onClick={() => setCurrentView('workout')}
+                                onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setCurrentView('workout'); }}
                             >
                                 Workout
                             </button>
                             <button
                                 className={`nav-btn ${currentView === 'weekly' ? 'active' : ''}`}
-                                onClick={() => { setCurrentView('weekly'); setViewingWeek(currentWeek); }}
+                                onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setCurrentView('weekly'); setViewingWeek(currentWeek); }}
                             >
                                 Weekly
                             </button>
                             <button
                                 className={`nav-btn ${currentView === 'progress' ? 'active' : ''}`}
-                                onClick={() => setCurrentView('progress')}
+                                onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setCurrentView('progress'); }}
                             >
                                 Progress
                             </button>
@@ -2842,23 +2904,39 @@
             const [settingsView, setSettingsView] = useState('main'); // 'main', 'exercises-1', 'exercises-2', etc.
             const [editingExercise, setEditingExercise] = useState(null);
             const [tempName, setTempName] = useState('');
+            const [tempSets, setTempSets] = useState('');
+            const [tempMinReps, setTempMinReps] = useState('');
+            const [tempMaxReps, setTempMaxReps] = useState('');
 
             const handleStartEdit = (exercise) => {
                 setEditingExercise(exercise.id);
                 setTempName(exercise.name);
+                setTempSets(exercise.sets || '');
+                setTempMinReps(exercise.minReps || '');
+                setTempMaxReps(exercise.maxReps || '');
             };
 
             const handleSaveEdit = (day, exerciseId) => {
                 if (tempName.trim()) {
-                    updateExerciseName(day, exerciseId, tempName.trim());
+                    updateExerciseName(day, exerciseId, tempName.trim(), {
+                        sets: tempSets === '' ? '' : parseInt(tempSets) || 0,
+                        minReps: tempMinReps === '' ? '' : parseInt(tempMinReps) || 0,
+                        maxReps: tempMaxReps === '' ? '' : parseInt(tempMaxReps) || 0
+                    });
                 }
                 setEditingExercise(null);
                 setTempName('');
+                setTempSets('');
+                setTempMinReps('');
+                setTempMaxReps('');
             };
 
             const handleCancelEdit = () => {
                 setEditingExercise(null);
                 setTempName('');
+                setTempSets('');
+                setTempMinReps('');
+                setTempMaxReps('');
             };
 
             if (settingsView.startsWith('exercises-')) {
@@ -2881,6 +2959,9 @@
                                     }}>
                                         {editingExercise === exercise.id ? (
                                             <div>
+                                                <label style={{ display: 'block', fontSize: '11px', color: '#6a5a8a', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                    Exercise Name
+                                                </label>
                                                 <input
                                                     type="text"
                                                     value={tempName}
@@ -2892,21 +2973,94 @@
                                                         border: '1px solid #3a2a5a',
                                                         borderRadius: '4px',
                                                         color: '#b8b8d0',
-                                                        marginBottom: '8px'
+                                                        marginBottom: '12px',
+                                                        boxSizing: 'border-box'
                                                     }}
                                                     autoFocus
                                                 />
+                                                {!exercise.isCardio && !exercise.type?.includes('bike') && !exercise.type?.includes('stairmaster') && exercise.type !== 'cardio' && exercise.typeId !== 'cardio' && (
+                                                    <>
+                                                        <label style={{ display: 'block', fontSize: '11px', color: '#6a5a8a', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                            Sets & Rep Range Goal
+                                                        </label>
+                                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
+                                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Sets</span>
+                                                                <input
+                                                                    type="number"
+                                                                    value={tempSets}
+                                                                    onChange={(e) => setTempSets(e.target.value)}
+                                                                    placeholder="3"
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '8px',
+                                                                        background: '#0d0d1a',
+                                                                        border: '1px solid #2a2a3a',
+                                                                        borderRadius: '4px',
+                                                                        color: '#b8b8d0',
+                                                                        fontSize: '14px',
+                                                                        textAlign: 'center',
+                                                                        boxSizing: 'border-box'
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Min Reps</span>
+                                                                <input
+                                                                    type="number"
+                                                                    value={tempMinReps}
+                                                                    onChange={(e) => setTempMinReps(e.target.value)}
+                                                                    placeholder="8"
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '8px',
+                                                                        background: '#0d0d1a',
+                                                                        border: '1px solid #2a2a3a',
+                                                                        borderRadius: '4px',
+                                                                        color: '#b8b8d0',
+                                                                        fontSize: '14px',
+                                                                        textAlign: 'center',
+                                                                        boxSizing: 'border-box'
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <span style={{ color: '#6a5a8a', paddingTop: '20px' }}>-</span>
+                                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Max Reps</span>
+                                                                <input
+                                                                    type="number"
+                                                                    value={tempMaxReps}
+                                                                    onChange={(e) => setTempMaxReps(e.target.value)}
+                                                                    placeholder="12"
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '8px',
+                                                                        background: '#0d0d1a',
+                                                                        border: '1px solid #2a2a3a',
+                                                                        borderRadius: '4px',
+                                                                        color: '#b8b8d0',
+                                                                        fontSize: '14px',
+                                                                        textAlign: 'center',
+                                                                        boxSizing: 'border-box'
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                )}
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     <button
                                                         onClick={() => handleSaveEdit(day, exercise.id)}
                                                         style={{
                                                             flex: 1,
-                                                            padding: '6px',
+                                                            padding: '8px',
                                                             background: '#3a2a5a',
                                                             border: 'none',
                                                             borderRadius: '4px',
                                                             color: '#b8b8d0',
-                                                            cursor: 'pointer'
+                                                            cursor: 'pointer',
+                                                            fontSize: '14px',
+                                                            fontWeight: '600'
                                                         }}
                                                     >
                                                         Save
@@ -2915,12 +3069,14 @@
                                                         onClick={handleCancelEdit}
                                                         style={{
                                                             flex: 1,
-                                                            padding: '6px',
+                                                            padding: '8px',
                                                             background: '#1a1a2a',
                                                             border: '1px solid #2a2a3a',
                                                             borderRadius: '4px',
                                                             color: '#8a8aa0',
-                                                            cursor: 'pointer'
+                                                            cursor: 'pointer',
+                                                            fontSize: '14px',
+                                                            fontWeight: '600'
                                                         }}
                                                     >
                                                         Cancel
