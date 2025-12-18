@@ -184,12 +184,17 @@
             width: 100%;
             padding: 12px;
             background: #1a1a2a;
-            border: 1px solid #2a2a3a;
+            border: 2px solid #2a2a3a;
             border-radius: 8px;
             color: #b8b8d0;
             font-size: 16px;
             -webkit-appearance: none;
             transition: all 0.3s;
+            box-sizing: border-box;
+        }
+
+        .input-field.error {
+            border-color: #ff5555;
         }
 
         .input-field:focus {
@@ -962,8 +967,23 @@
 
             // Cardio
             'Treadmill', 'Stairmaster', 'Assault Bike', 'Rowing Machine',
-            'Elliptical', 'Jump Rope', 'Battle Ropes'
+            'Elliptical', 'Jump Rope', 'Battle Ropes', 'Cycling', 'Walking',
+            'Running', 'Sprinting', 'Jogging'
         ];
+
+        // Cardio exercises list for conditional rendering
+        const CARDIO_EXERCISES = [
+            'Treadmill', 'Stairmaster', 'Assault Bike', 'Rowing Machine',
+            'Elliptical', 'Jump Rope', 'Battle Ropes', 'Cycling', 'Walking',
+            'Running', 'Sprinting', 'Jogging'
+        ];
+
+        // Helper function to check if an exercise is cardio
+        function isCardioExercise(exerciseName) {
+            return CARDIO_EXERCISES.some(cardio =>
+                exerciseName.toLowerCase().includes(cardio.toLowerCase())
+            );
+        }
 
         // ============================================================================
         // SETUP WIZARD COMPONENTS
@@ -1005,16 +1025,32 @@
                 const allCategories = new Set();
 
                 Object.entries(workoutDays).forEach(([dayNum, dayData]) => {
-                    exercisesByDay[dayNum] = dayData.exercises.map((ex, idx) => ({
-                        id: generateUUID(),
-                        name: ex.name,
-                        category: dayData.name, // Use day name as category
-                        typeId: 'standard', // Default to standard for now
-                        sets: ex.sets || 3,
-                        minReps: ex.minReps || 8,
-                        maxReps: ex.maxReps || 12,
-                        order: idx
-                    }));
+                    exercisesByDay[dayNum] = dayData.exercises.map((ex, idx) => {
+                        if (ex.isCardio) {
+                            return {
+                                id: generateUUID(),
+                                name: ex.name,
+                                category: dayData.name,
+                                typeId: 'cardio',
+                                isCardio: true,
+                                intensity: ex.intensity || '',
+                                minutes: ex.minutes || 0,
+                                seconds: ex.seconds || 0,
+                                order: idx
+                            };
+                        } else {
+                            return {
+                                id: generateUUID(),
+                                name: ex.name,
+                                category: dayData.name,
+                                typeId: 'standard',
+                                sets: ex.sets || 3,
+                                minReps: ex.minReps || 8,
+                                maxReps: ex.maxReps || 12,
+                                order: idx
+                            };
+                        }
+                    });
                     allCategories.add(dayData.name);
                 });
 
@@ -1173,6 +1209,7 @@
             const [selectedDay, setSelectedDay] = useState(null);
             const [customExercise, setCustomExercise] = useState('');
             const [showExample, setShowExample] = useState(false);
+            const [validationErrors, setValidationErrors] = useState({});
 
             const uniqueDays = Array.from(new Set(schedule.workoutDays.map(d => d.workoutDayNumber))).sort();
 
@@ -1198,16 +1235,27 @@
             const addExercise = (exerciseName) => {
                 if (!exerciseName.trim()) return;
 
+                const trimmedName = exerciseName.trim();
+                const isCardio = isCardioExercise(trimmedName);
+
+                const newExercise = isCardio ? {
+                    name: trimmedName,
+                    isCardio: true,
+                    intensity: '',
+                    minutes: 0,
+                    seconds: 0
+                } : {
+                    name: trimmedName,
+                    sets: 3,
+                    minReps: 8,
+                    maxReps: 12
+                };
+
                 setWorkoutDays({
                     ...workoutDays,
                     [selectedDay]: {
                         ...workoutDays[selectedDay],
-                        exercises: [...workoutDays[selectedDay].exercises, {
-                            name: exerciseName.trim(),
-                            sets: 3,
-                            minReps: 8,
-                            maxReps: 12
-                        }]
+                        exercises: [...workoutDays[selectedDay].exercises, newExercise]
                     }
                 });
 
@@ -1242,7 +1290,39 @@
             const hasAtLeastOneExercise = Object.values(workoutDays).some(day => day.exercises.length > 0);
             const allDaysHaveExercises = Object.values(workoutDays).every(day => day.exercises.length > 0);
 
+            const validateExercises = () => {
+                const errors = {};
+
+                Object.entries(workoutDays).forEach(([dayNum, dayData]) => {
+                    dayData.exercises.forEach((ex, idx) => {
+                        if (ex.isCardio) {
+                            if (!ex.intensity || ex.intensity.trim() === '') {
+                                const errorKey = `${dayNum}-${idx}-intensity`;
+                                errors[errorKey] = 'Intensity is required for cardio exercises';
+                            }
+                            if (!ex.minutes || ex.minutes === 0) {
+                                const errorKey = `${dayNum}-${idx}-minutes`;
+                                errors[errorKey] = 'Minutes is required for cardio exercises';
+                            }
+                        }
+                    });
+                });
+
+                return errors;
+            };
+
             const handleContinue = () => {
+                const errors = validateExercises();
+                setValidationErrors(errors);
+
+                if (Object.keys(errors).length > 0) {
+                    // Find first day with errors and switch to it
+                    const firstErrorKey = Object.keys(errors)[0];
+                    const dayNum = parseInt(firstErrorKey.split('-')[0]);
+                    setSelectedDay(dayNum);
+                    return;
+                }
+
                 if (allDaysHaveExercises) {
                     onNext(workoutDays);
                 } else {
@@ -1383,67 +1463,159 @@
                                                         </button>
                                                     </div>
                                                     <div className="wizard-exercise-inputs" style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                            <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Sets</span>
-                                                            <input
-                                                                type="number"
-                                                                value={ex.sets || 3}
-                                                                onChange={(e) => updateExerciseField(selectedDay, idx, 'sets', parseInt(e.target.value) || 0)}
-                                                                placeholder="Sets"
-                                                                style={{
-                                                                    width: '60px',
-                                                                    padding: '6px',
-                                                                    background: '#1a1a2a',
-                                                                    border: '1px solid #2a2a3a',
-                                                                    borderRadius: '4px',
-                                                                    color: '#b8b8d0',
-                                                                    fontSize: '14px',
-                                                                    textAlign: 'center'
-                                                                }}
-                                                                title="Sets"
-                                                            />
-                                                        </div>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                            <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Min</span>
-                                                            <input
-                                                                type="number"
-                                                                value={ex.minReps || 8}
-                                                                onChange={(e) => updateExerciseField(selectedDay, idx, 'minReps', parseInt(e.target.value) || 0)}
-                                                                placeholder="Min"
-                                                                style={{
-                                                                    width: '60px',
-                                                                    padding: '6px',
-                                                                    background: '#1a1a2a',
-                                                                    border: '1px solid #2a2a3a',
-                                                                    borderRadius: '4px',
-                                                                    color: '#b8b8d0',
-                                                                    fontSize: '14px',
-                                                                    textAlign: 'center'
-                                                                }}
-                                                                title="Minimum Reps"
-                                                            />
-                                                        </div>
-                                                        <span style={{ color: '#6a5a8a', paddingBottom: '6px' }}>-</span>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                            <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Max</span>
-                                                            <input
-                                                                type="number"
-                                                                value={ex.maxReps || 12}
-                                                                onChange={(e) => updateExerciseField(selectedDay, idx, 'maxReps', parseInt(e.target.value) || 0)}
-                                                                placeholder="Max"
-                                                                style={{
-                                                                    width: '60px',
-                                                                    padding: '6px',
-                                                                    background: '#1a1a2a',
-                                                                    border: '1px solid #2a2a3a',
-                                                                    borderRadius: '4px',
-                                                                    color: '#b8b8d0',
-                                                                    fontSize: '14px',
-                                                                    textAlign: 'center'
-                                                                }}
-                                                                title="Maximum Reps"
-                                                            />
-                                                        </div>
+                                                        {ex.isCardio ? (
+                                                            <>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <span style={{ fontSize: '10px', color: validationErrors[`${selectedDay}-${idx}-intensity`] ? '#ff5555' : '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Intensity</span>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={ex.intensity || ''}
+                                                                        onChange={(e) => {
+                                                                            updateExerciseField(selectedDay, idx, 'intensity', e.target.value);
+                                                                            // Clear validation error when user types
+                                                                            if (validationErrors[`${selectedDay}-${idx}-intensity`]) {
+                                                                                const newErrors = { ...validationErrors };
+                                                                                delete newErrors[`${selectedDay}-${idx}-intensity`];
+                                                                                setValidationErrors(newErrors);
+                                                                            }
+                                                                        }}
+                                                                        placeholder="Level 7"
+                                                                        style={{
+                                                                            width: '100px',
+                                                                            padding: '6px',
+                                                                            background: '#1a1a2a',
+                                                                            border: validationErrors[`${selectedDay}-${idx}-intensity`] ? '2px solid #ff5555' : '2px solid #2a2a3a',
+                                                                            borderRadius: '4px',
+                                                                            color: '#b8b8d0',
+                                                                            fontSize: '14px',
+                                                                            textAlign: 'center',
+                                                                            boxSizing: 'border-box'
+                                                                        }}
+                                                                        title="Intensity"
+                                                                    />
+                                                                </div>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <span style={{ fontSize: '10px', color: validationErrors[`${selectedDay}-${idx}-minutes`] ? '#ff5555' : '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Minutes</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={ex.minutes || 0}
+                                                                        onChange={(e) => {
+                                                                            updateExerciseField(selectedDay, idx, 'minutes', parseInt(e.target.value) || 0);
+                                                                            // Clear validation error when user types
+                                                                            if (validationErrors[`${selectedDay}-${idx}-minutes`]) {
+                                                                                const newErrors = { ...validationErrors };
+                                                                                delete newErrors[`${selectedDay}-${idx}-minutes`];
+                                                                                setValidationErrors(newErrors);
+                                                                            }
+                                                                        }}
+                                                                        placeholder="0"
+                                                                        min="0"
+                                                                        style={{
+                                                                            width: '50px',
+                                                                            padding: '6px',
+                                                                            background: '#1a1a2a',
+                                                                            border: validationErrors[`${selectedDay}-${idx}-minutes`] ? '2px solid #ff5555' : '2px solid #2a2a3a',
+                                                                            borderRadius: '4px',
+                                                                            color: '#b8b8d0',
+                                                                            fontSize: '14px',
+                                                                            textAlign: 'center',
+                                                                            boxSizing: 'border-box'
+                                                                        }}
+                                                                        title="Minutes"
+                                                                    />
+                                                                </div>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Seconds</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={ex.seconds || 0}
+                                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'seconds', parseInt(e.target.value) || 0)}
+                                                                        placeholder="0"
+                                                                        min="0"
+                                                                        max="59"
+                                                                        style={{
+                                                                            width: '50px',
+                                                                            padding: '6px',
+                                                                            background: '#1a1a2a',
+                                                                            border: '2px solid #2a2a3a',
+                                                                            borderRadius: '4px',
+                                                                            color: '#b8b8d0',
+                                                                            fontSize: '14px',
+                                                                            textAlign: 'center',
+                                                                            boxSizing: 'border-box'
+                                                                        }}
+                                                                        title="Seconds"
+                                                                    />
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Sets</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={ex.sets || 3}
+                                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'sets', parseInt(e.target.value) || 0)}
+                                                                        placeholder="Sets"
+                                                                        style={{
+                                                                            width: '60px',
+                                                                            padding: '6px',
+                                                                            background: '#1a1a2a',
+                                                                            border: '2px solid #2a2a3a',
+                                                                            borderRadius: '4px',
+                                                                            color: '#b8b8d0',
+                                                                            fontSize: '14px',
+                                                                            textAlign: 'center',
+                                                                            boxSizing: 'border-box'
+                                                                        }}
+                                                                        title="Sets"
+                                                                    />
+                                                                </div>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Min</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={ex.minReps || 8}
+                                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'minReps', parseInt(e.target.value) || 0)}
+                                                                        placeholder="Min"
+                                                                        style={{
+                                                                            width: '60px',
+                                                                            padding: '6px',
+                                                                            background: '#1a1a2a',
+                                                                            border: '2px solid #2a2a3a',
+                                                                            borderRadius: '4px',
+                                                                            color: '#b8b8d0',
+                                                                            fontSize: '14px',
+                                                                            textAlign: 'center',
+                                                                            boxSizing: 'border-box'
+                                                                        }}
+                                                                        title="Minimum Reps"
+                                                                    />
+                                                                </div>
+                                                                <span style={{ color: '#6a5a8a', paddingBottom: '6px' }}>-</span>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Max</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={ex.maxReps || 12}
+                                                                        onChange={(e) => updateExerciseField(selectedDay, idx, 'maxReps', parseInt(e.target.value) || 0)}
+                                                                        placeholder="Max"
+                                                                        style={{
+                                                                            width: '60px',
+                                                                            padding: '6px',
+                                                                            background: '#1a1a2a',
+                                                                            border: '2px solid #2a2a3a',
+                                                                            borderRadius: '4px',
+                                                                            color: '#b8b8d0',
+                                                                            fontSize: '14px',
+                                                                            textAlign: 'center',
+                                                                            boxSizing: 'border-box'
+                                                                        }}
+                                                                        title="Maximum Reps"
+                                                                    />
+                                                                </div>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -1726,6 +1898,7 @@
             const [editingWorkout, setEditingWorkout] = useState(null);
             const [viewingWeek, setViewingWeek] = useState(getCurrentWeek());
             const [showWizard, setShowWizard] = useState(false);
+            const [fieldErrors, setFieldErrors] = useState({});
             const currentWeek = getCurrentWeek();
 
             useEffect(() => {
@@ -1854,13 +2027,36 @@
                     const newWorkoutData = {};
 
                     todayWorkout.exercises.forEach(exercise => {
-                        if (exercise.weight || exercise.reps || exercise.rounds || exercise.time) {
+                        let hasData = false;
+
+                        if (exercise.type === 'assault-bike') {
+                            hasData = exercise.rounds && exercise.rounds.trim() !== '';
+                        } else if (exercise.type === 'stairmaster') {
+                            hasData = exercise.time && exercise.time.trim() !== '';
+                        } else if (exercise.isCardio || exercise.type === 'cardio') {
+                            hasData = (exercise.intensity && exercise.intensity.trim() !== '') ||
+                                      (exercise.minutes && exercise.minutes > 0) ||
+                                      (exercise.seconds && exercise.seconds > 0);
+                        } else if (exercise.type === 'bodyweight') {
+                            hasData = exercise.reps && exercise.reps.toString().trim() !== '';
+                        } else {
+                            hasData = (exercise.weight && exercise.weight.toString().trim() !== '') ||
+                                      (exercise.reps && exercise.reps.toString().trim() !== '');
+                        }
+
+                        if (hasData) {
                             newLoggedExercises[exercise.id] = true;
 
                             if (exercise.type === 'assault-bike') {
                                 newWorkoutData[exercise.id] = { rounds: exercise.rounds };
                             } else if (exercise.type === 'stairmaster') {
                                 newWorkoutData[exercise.id] = { time: exercise.time, level: exercise.level || 'Level 7' };
+                            } else if (exercise.isCardio || exercise.type === 'cardio') {
+                                newWorkoutData[exercise.id] = {
+                                    intensity: exercise.intensity,
+                                    minutes: exercise.minutes,
+                                    seconds: exercise.seconds
+                                };
                             } else if (exercise.type === 'bodyweight') {
                                 newWorkoutData[exercise.id] = { reps: exercise.reps };
                             } else {
@@ -1963,11 +2159,39 @@
             const getPreviousWorkout = (exerciseId) => {
                 if (workoutHistory.length === 0) return null;
 
-                // Find most recent workout with this exercise
+                // Collect the last 3 sessions that included this exercise (regardless of NA status)
+                const lastThreeSessions = [];
                 for (let workout of workoutHistory) {
                     const exercise = workout.exercises.find(e => e.id === exerciseId);
-                    if (exercise) return exercise;
+                    if (exercise) {
+                        lastThreeSessions.push(exercise);
+                        if (lastThreeSessions.length >= 3) break;
+                    }
                 }
+
+                // From those 3, find the most recent one with actual data (non-NA)
+                for (let exercise of lastThreeSessions) {
+                    let hasData = false;
+                    if (exercise.type === 'assault-bike') {
+                        hasData = exercise.rounds && exercise.rounds.trim() !== '';
+                    } else if (exercise.type === 'stairmaster') {
+                        hasData = exercise.time && exercise.time.trim() !== '';
+                    } else if (exercise.isCardio || exercise.type === 'cardio') {
+                        // For cardio, check that total time is > 0 (not just "0:00")
+                        const totalSeconds = ((exercise.minutes || 0) * 60) + (exercise.seconds || 0);
+                        hasData = totalSeconds > 0;
+                    } else if (exercise.type === 'bodyweight') {
+                        hasData = exercise.reps && exercise.reps.toString().trim() !== '';
+                    } else {
+                        hasData = (exercise.weight && exercise.weight.toString().trim() !== '') ||
+                                  (exercise.reps && exercise.reps.toString().trim() !== '');
+                    }
+
+                    if (hasData) {
+                        return exercise;
+                    }
+                }
+
                 return null;
             };
 
@@ -1980,19 +2204,58 @@
                     }
                 }));
 
+                // Clear validation error for this field when user types
+                const errorKey = `${exerciseId}-${field}`;
+                if (fieldErrors[errorKey]) {
+                    setFieldErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors[errorKey];
+                        return newErrors;
+                    });
+                }
             };
 
             const logExercise = (exerciseId) => {
                 const exercise = getCurrentExercises().find(e => e.id === exerciseId);
-                let data = workoutData[exerciseId];
+                let data = workoutData[exerciseId] || {};
 
-                if (!data) return;
+                // Validate data based on exercise type and set field errors
+                const errors = {};
 
-                // Validate data based on exercise type
+                // For standard exercises, validate weight and reps
+                if (exercise.type === 'standard' || (!exercise.type && !exercise.isCardio && exercise.typeId !== 'cardio')) {
+                    if (!data.weight || data.weight.toString().trim() === '') {
+                        errors[`${exerciseId}-weight`] = true;
+                    }
+                    if (!data.reps || data.reps.toString().trim() === '') {
+                        errors[`${exerciseId}-reps`] = true;
+                    }
+
+                    // If there are validation errors, set them and return
+                    if (Object.keys(errors).length > 0) {
+                        setFieldErrors(errors);
+                        return;
+                    }
+                }
+
                 if (exercise.type === 'assault-bike' && !data.rounds) return;
                 if (exercise.type === 'stairmaster' && !data.time) return;
                 if (exercise.type === 'bodyweight' && !data.reps) return;
-                if (exercise.type === 'standard' && !data.weight && !data.reps) return;
+                if (exercise.isCardio || exercise.typeId === 'cardio') {
+                    // Check if minutes is filled (required)
+                    if (!data.minutes || data.minutes === 0) {
+                        errors[`${exerciseId}-minutes`] = true;
+                        setFieldErrors(errors);
+                        return;
+                    }
+
+                    // For intensity, check if there's a default available (from previous workout or exercise config)
+                    const previous = getPreviousWorkout(exerciseId);
+                    const hasIntensity = (data.intensity && data.intensity.trim()) ||
+                                        (previous && previous.intensity && previous.intensity.trim()) ||
+                                        (exercise.intensity && exercise.intensity.trim());
+                    if (!hasIntensity) return;
+                }
 
                 let finalData = { ...data };
 
@@ -2038,6 +2301,17 @@
                         type: exercise.type,
                         level: finalData.level || 'Level 7',
                         time: finalData.time || ''
+                    };
+                } else if (exercise.isCardio || exercise.typeId === 'cardio') {
+                    exerciseToSave = {
+                        id: exercise.id,
+                        name: exercise.name,
+                        category: exercise.category,
+                        type: 'cardio',
+                        isCardio: true,
+                        intensity: finalData.intensity !== undefined ? finalData.intensity : (exercise.intensity || ''),
+                        minutes: finalData.minutes !== undefined ? finalData.minutes : (exercise.minutes || 0),
+                        seconds: finalData.seconds !== undefined ? finalData.seconds : (exercise.seconds || 0)
                     };
                 } else if (exercise.type === 'bodyweight') {
                     exerciseToSave = {
@@ -2097,6 +2371,17 @@
                                     type: ex.type,
                                     level: 'Level 7',
                                     time: ''
+                                };
+                            } else if (ex.isCardio || ex.typeId === 'cardio') {
+                                return {
+                                    id: ex.id,
+                                    name: ex.name,
+                                    category: ex.category,
+                                    type: 'cardio',
+                                    isCardio: true,
+                                    intensity: '',
+                                    minutes: 0,
+                                    seconds: 0
                                 };
                             } else if (ex.type === 'bodyweight') {
                                 return {
@@ -2410,6 +2695,7 @@
                             userBodyweight={userBodyweight}
                             schedule={schedule}
                             exercisesByDay={exercisesByDay}
+                            fieldErrors={fieldErrors}
                         />}
                         {currentView === 'weekly' && <WeeklyView
                             workoutHistory={workoutHistory}
@@ -2868,6 +3154,58 @@
                                                 })()}
                                             </select>
                                         </div>
+                                    ) : (exercise.isCardio || exercise.typeId === 'cardio') ? (
+                                        <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+                                            <input
+                                                type="text"
+                                                placeholder="Intensity"
+                                                value={editedExercise?.intensity || ''}
+                                                onChange={(e) => handleExerciseChange(exercise.id, 'intensity', e.target.value)}
+                                                style={{
+                                                    padding: '8px',
+                                                    background: '#0d0d1a',
+                                                    border: '1px solid #3a2a5a',
+                                                    borderRadius: '4px',
+                                                    color: '#b8b8d0'
+                                                }}
+                                            />
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <input
+                                                    type="number"
+                                                    placeholder="Minutes"
+                                                    value={editedExercise?.minutes || ''}
+                                                    onChange={(e) => handleExerciseChange(exercise.id, 'minutes', e.target.value)}
+                                                    min="0"
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '8px',
+                                                        background: '#0d0d1a',
+                                                        border: '1px solid #3a2a5a',
+                                                        borderRadius: '4px',
+                                                        color: '#b8b8d0',
+                                                        textAlign: 'center'
+                                                    }}
+                                                />
+                                                <span style={{ color: '#6a5a8a', alignSelf: 'center' }}>:</span>
+                                                <input
+                                                    type="number"
+                                                    placeholder="Seconds"
+                                                    value={editedExercise?.seconds || ''}
+                                                    onChange={(e) => handleExerciseChange(exercise.id, 'seconds', e.target.value)}
+                                                    min="0"
+                                                    max="59"
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '8px',
+                                                        background: '#0d0d1a',
+                                                        border: '1px solid #3a2a5a',
+                                                        borderRadius: '4px',
+                                                        color: '#b8b8d0',
+                                                        textAlign: 'center'
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
                                     ) : exercise.type === 'bodyweight' ? (
                                         <div style={{ display: 'flex', gap: '8px' }}>
                                             <input
@@ -2975,8 +3313,16 @@
                     }
 
                     const exercise = workout.exercises.find(e => e.id === exerciseId);
-                    if (exercise && (exercise.weight || exercise.reps || exercise.rounds || exercise.time)) {
-                        return exercise;
+                    if (exercise) {
+                        // For cardio, check that time is actually > 0 (not just "0:00")
+                        if (exercise.isCardio || exercise.type === 'cardio') {
+                            const totalSeconds = ((exercise.minutes || 0) * 60) + (exercise.seconds || 0);
+                            if (totalSeconds > 0) {
+                                return exercise;
+                            }
+                        } else if (exercise.weight || exercise.reps || exercise.rounds || exercise.time || exercise.intensity) {
+                            return exercise;
+                        }
                     }
                 }
                 return null;
@@ -2989,7 +3335,13 @@
             // Calculate PRs
             const prs = [];
             currentDayWorkoutExercises.forEach(exercise => {
-                if (!exercise.weight && !exercise.reps && !exercise.rounds && !exercise.time) {
+                // Skip NA exercises - for cardio, check if time is 0:00
+                if (exercise.isCardio || exercise.type === 'cardio') {
+                    const totalSeconds = ((exercise.minutes || 0) * 60) + (exercise.seconds || 0);
+                    if (totalSeconds === 0) {
+                        return; // Skip cardio with 0:00
+                    }
+                } else if (!exercise.weight && !exercise.reps && !exercise.rounds && !exercise.time && !exercise.intensity) {
                     return; // Skip NA exercises
                 }
 
@@ -3012,6 +3364,13 @@
                     if (currentSeconds > previousSeconds) {
                         isPR = true;
                         prType = `${exercise.time} (prev: ${previous.time})`;
+                    }
+                } else if (exercise.isCardio || exercise.type === 'cardio') {
+                    const currentTotalSeconds = (parseInt(exercise.minutes) || 0) * 60 + (parseInt(exercise.seconds) || 0);
+                    const previousTotalSeconds = (parseInt(previous.minutes) || 0) * 60 + (parseInt(previous.seconds) || 0);
+                    if (currentTotalSeconds > previousTotalSeconds) {
+                        isPR = true;
+                        prType = `${exercise.minutes}:${String(exercise.seconds).padStart(2, '0')} @ ${exercise.intensity} (prev: ${previous.minutes}:${String(previous.seconds).padStart(2, '0')} @ ${previous.intensity})`;
                     }
                 } else if (exercise.type === 'bodyweight') {
                     if (parseInt(exercise.reps) > parseInt(previous.reps || 0)) {
@@ -3043,9 +3402,15 @@
             });
 
             // Count completed exercises (only for current day)
-            const completedCount = currentDayWorkoutExercises.filter(e =>
-                e.weight || e.reps || e.rounds || e.time
-            ).length;
+            const completedCount = currentDayWorkoutExercises.filter(e => {
+                // For cardio, check that time is actually > 0 (not just "0:00")
+                if (e.isCardio || e.type === 'cardio') {
+                    const totalSeconds = ((e.minutes || 0) * 60) + (e.seconds || 0);
+                    return totalSeconds > 0;
+                }
+                // For other exercise types, check if any data exists
+                return e.weight || e.reps || e.rounds || e.time || e.intensity;
+            }).length;
             const totalCount = getCurrentExercises().length;
 
             const date = new Date(todayWorkout.date);
@@ -3083,7 +3448,7 @@
             );
         }
 
-        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay }) {
+        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors }) {
             const exercises = getCurrentExercises();
             const todayDay = getTodayDay();
 
@@ -3306,6 +3671,83 @@
                     );
                 }
 
+                // Cardio exercise (generic cardio type from wizard)
+                if (exercise.isCardio || exercise.typeId === 'cardio') {
+                    const placeholderIntensity = previous?.intensity || exercise.intensity || '';
+                    const placeholderMinutes = previous?.minutes || exercise.minutes || 0;
+                    const placeholderSeconds = previous?.seconds || exercise.seconds || 0;
+
+                    return (
+                        <div key={exercise.id} className={`exercise-card ${isLogged ? 'logged' : ''}`}>
+                            <div className="exercise-header">
+                                <div>
+                                    <div className="exercise-name">
+                                        {exercise.name}
+                                    </div>
+                                    {previous && (
+                                        <div style={{ fontSize: '12px', color: '#8a7aaa', marginTop: '4px', fontStyle: 'italic' }}>
+                                            Goal: {previous.intensity || 'Any intensity'} - {previous.minutes || 0}:{String(previous.seconds || 0).padStart(2, '0')}
+                                        </div>
+                                    )}
+                                    {!previous && (exercise.intensity !== undefined || exercise.minutes !== undefined) && (
+                                        <div style={{ fontSize: '12px', color: '#8a7aaa', marginTop: '4px', fontStyle: 'italic' }}>
+                                            Goal: {exercise.intensity || 'Any intensity'} - {exercise.minutes || 0}:{String(exercise.seconds || 0).padStart(2, '0')}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="input-row">
+                                <div className="input-group">
+                                    <label className="input-label">Intensity</label>
+                                    <input
+                                        type="text"
+                                        className="input-field"
+                                        value={data.intensity !== undefined ? data.intensity : (exercise.intensity || '')}
+                                        onChange={(e) => handleInputChange(exercise.id, 'intensity', e.target.value)}
+                                        disabled={isLogged}
+                                    />
+                                </div>
+                                <div className="input-group">
+                                    <label className="input-label">Minutes</label>
+                                    <input
+                                        type="number"
+                                        inputMode="numeric"
+                                        className={`input-field ${fieldErrors[`${exercise.id}-minutes`] ? 'error' : ''}`}
+                                        value={data.minutes !== undefined ? data.minutes : ''}
+                                        onChange={(e) => handleInputChange(exercise.id, 'minutes', e.target.value)}
+                                        placeholder={placeholderMinutes}
+                                        min="0"
+                                        disabled={isLogged}
+                                        style={{ textAlign: 'center' }}
+                                    />
+                                </div>
+                                <div className="input-group">
+                                    <label className="input-label">Seconds</label>
+                                    <input
+                                        type="number"
+                                        inputMode="numeric"
+                                        className="input-field"
+                                        value={data.seconds !== undefined ? data.seconds : ''}
+                                        onChange={(e) => handleInputChange(exercise.id, 'seconds', e.target.value)}
+                                        placeholder={placeholderSeconds}
+                                        min="0"
+                                        max="59"
+                                        disabled={isLogged}
+                                        style={{ textAlign: 'center' }}
+                                    />
+                                </div>
+                            </div>
+                            <button
+                                className={`log-btn ${isLogged ? 'logged' : ''}`}
+                                onClick={() => logExercise(exercise.id)}
+                                disabled={isLogged}
+                            >
+                                {isLogged ? '✓ Logged' : 'LOG'}
+                            </button>
+                        </div>
+                    );
+                }
+
                 // Standard exercise
                 const placeholderWeight = previous?.weight || '';
                 const placeholderReps = previous?.reps || '';
@@ -3335,7 +3777,7 @@
                                 <input
                                     type="number"
                                     inputMode="decimal"
-                                    className="input-field"
+                                    className={`input-field ${fieldErrors[`${exercise.id}-weight`] ? 'error' : ''}`}
                                     value={data.weight || ''}
                                     onChange={(e) => handleInputChange(exercise.id, 'weight', e.target.value)}
                                     placeholder={placeholderWeight}
@@ -3347,7 +3789,7 @@
                                 <input
                                     type="number"
                                     inputMode="numeric"
-                                    className="input-field"
+                                    className={`input-field ${fieldErrors[`${exercise.id}-reps`] ? 'error' : ''}`}
                                     value={data.reps || ''}
                                     onChange={(e) => handleInputChange(exercise.id, 'reps', e.target.value)}
                                     placeholder={placeholderReps}
@@ -3493,6 +3935,10 @@
                                                                 ? (completedExercise.rounds ? `${completedExercise.rounds} rounds` : <span style={{ color: '#555' }}>NA</span>)
                                                                 : completedExercise.type === 'stairmaster'
                                                                 ? (completedExercise.time ? `${completedExercise.level || 'Level 7'} - ${completedExercise.time}` : <span style={{ color: '#555' }}>NA</span>)
+                                                                : (completedExercise.isCardio || completedExercise.type === 'cardio')
+                                                                ? ((completedExercise.intensity || completedExercise.minutes !== undefined)
+                                                                    ? `${completedExercise.intensity || 'No intensity'} - ${completedExercise.minutes || 0}:${String(completedExercise.seconds || 0).padStart(2, '0')}`
+                                                                    : <span style={{ color: '#555' }}>NA</span>)
                                                                 : (completedExercise.weight && completedExercise.reps
                                                                     ? `${completedExercise.weight}${completedExercise.weight === 'Body Weight' ? '' : 'lbs'} × ${completedExercise.reps}`
                                                                     : <span style={{ color: '#555' }}>NA</span>)
@@ -3585,6 +4031,61 @@
                                 {
                                     label: 'Time (seconds)',
                                     data: exerciseData.map(d => parseTimeToSeconds(d.exercise.time)),
+                                    borderColor: '#0a84ff',
+                                    backgroundColor: 'rgba(10, 132, 255, 0.1)',
+                                    tension: 0.3
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: { labels: { color: '#fff' } }
+                            },
+                            scales: {
+                                x: {
+                                    ticks: { color: '#888' },
+                                    grid: { color: '#2a2a2a' },
+                                    title: {
+                                        display: true,
+                                        text: 'Date',
+                                        color: '#888'
+                                    }
+                                },
+                                y: {
+                                    ticks: {
+                                        color: '#888',
+                                        callback: function(value) {
+                                            return formatSecondsToTime(value);
+                                        }
+                                    },
+                                    grid: { color: '#2a2a2a' },
+                                    title: {
+                                        display: true,
+                                        text: 'Time',
+                                        color: '#888'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    return () => chart.destroy();
+                }
+
+                if (exercise?.isCardio || exercise?.typeId === 'cardio') {
+                    const chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: exerciseData.map(d => d.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+                            datasets: [
+                                {
+                                    label: 'Time (seconds)',
+                                    data: exerciseData.map(d => {
+                                        const minutes = parseInt(d.exercise.minutes) || 0;
+                                        const seconds = parseInt(d.exercise.seconds) || 0;
+                                        return minutes * 60 + seconds;
+                                    }),
                                     borderColor: '#0a84ff',
                                     backgroundColor: 'rgba(10, 132, 255, 0.1)',
                                     tension: 0.3
