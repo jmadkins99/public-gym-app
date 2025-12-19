@@ -11,6 +11,7 @@ Future updates will include new features, templates, and refinements based on us
 ## Features
 
 - **Setup Wizard**: 4-step onboarding to configure your workout schedule and exercises
+- **Coached Programs**: Access pre-configured workout programs if you're working with a coach
 - **Custom Schedules**: 1-7 workout days per week with custom day names
 - **Exercise Library**: 70+ common exercises with autocomplete, or create your own
 - **Cardio Support**: Dedicated fields for cardio exercises (Intensity levels 1-15, Time tracking)
@@ -26,6 +27,8 @@ Future updates will include new features, templates, and refinements based on us
 ## How It Works
 
 1. **First Launch**: Complete the 4-step setup wizard to configure your schedule and exercises
+   - Choose "Get Started" to build a custom program from scratch
+   - Choose "I Have a Coach" to load a pre-configured program from your coach
 2. **Log Workouts**: Enter your weight/reps, tap LOG to save each set
 3. **Submit Day**: Tap "Submit Day" when finished to lock your workout
 4. **Track Progress**: View history in the Weekly tab and charts in the Progress tab
