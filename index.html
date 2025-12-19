@@ -882,6 +882,61 @@
             return `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
 
+        // Generate deterministic hash for verification purposes
+        function hashVerifier(input) {
+            let hash = 0;
+            for (let i = 0; i < input.length; i++) {
+                const char = input.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return hash.toString(36);
+        }
+
+        // Verify doom_id against manifest
+        function verifyDoomId(doomId) {
+            const manifest = {
+                'D0O0O0M1': 'lexi'
+            };
+            return manifest[doomId] || null;
+        }
+
+        // Get preset template by identifier
+        function getPresetTemplate(identifier) {
+            const templates = {
+                'lexi': {
+                    name: 'Upper/Lower Split',
+                    workoutDays: {
+                        1: {
+                            name: 'Upper',
+                            exercises: [
+                                { name: 'Bench Press', sets: 4, minReps: 6, maxReps: 8 },
+                                { name: 'Barbell Row', sets: 4, minReps: 6, maxReps: 8 },
+                                { name: 'Overhead Press', sets: 3, minReps: 8, maxReps: 10 },
+                                { name: 'Lat Pulldown', sets: 3, minReps: 8, maxReps: 12 },
+                                { name: 'Dumbbell Lateral Raise', sets: 3, minReps: 12, maxReps: 15 },
+                                { name: 'Cable Bicep Curl', sets: 3, minReps: 10, maxReps: 12 },
+                                { name: 'Tricep Rope Pushdown', sets: 3, minReps: 10, maxReps: 12 }
+                            ]
+                        },
+                        2: {
+                            name: 'Lower',
+                            exercises: [
+                                { name: 'Squat', sets: 4, minReps: 6, maxReps: 8 },
+                                { name: 'Romanian Deadlift', sets: 3, minReps: 8, maxReps: 10 },
+                                { name: 'Leg Press', sets: 3, minReps: 10, maxReps: 12 },
+                                { name: 'Leg Curl', sets: 3, minReps: 10, maxReps: 12 },
+                                { name: 'Leg Extension', sets: 3, minReps: 10, maxReps: 12 },
+                                { name: 'Calf Raise', sets: 4, minReps: 12, maxReps: 15 },
+                                { name: 'Plank', sets: 3, minReps: 30, maxReps: 60 }
+                            ]
+                        }
+                    }
+                }
+            };
+            return templates[identifier] || null;
+        }
+
         // Namespace localStorage based on app path to prevent conflicts between gym-tracker and public-gym-app
         const APP_NAMESPACE = (() => {
             const path = window.location.pathname;
@@ -993,14 +1048,56 @@
             const [step, setStep] = useState(1);
             const [schedule, setSchedule] = useState(null);
             const [workoutDays, setWorkoutDays] = useState({}); // { 1: { name: 'Push', exercises: [...] }, 2: { ... } }
+            const [isCoachMode, setIsCoachMode] = useState(false);
+            const [coachIdentifier, setCoachIdentifier] = useState(null);
 
             const goNext = () => setStep(step + 1);
-            const goBack = () => setStep(step - 1);
+            const goBack = () => {
+                if (step === 2 && isCoachMode) {
+                    setStep(1.5); // Go back to coach ID step
+                } else {
+                    setStep(step - 1);
+                }
+            };
+
+            const handleCoachMode = () => {
+                setIsCoachMode(true);
+                setStep(1.5); // Coach ID step
+            };
+
+            const handleCoachIdVerified = (identifier) => {
+                setCoachIdentifier(identifier);
+                setStep(2); // Go to schedule step
+            };
 
             const handleScheduleComplete = (newSchedule) => {
                 setSchedule(newSchedule);
 
-                // Initialize empty workout days
+                if (isCoachMode && coachIdentifier) {
+                    // Load preset workouts for coach mode
+                    const preset = getPresetTemplate(coachIdentifier);
+                    if (preset) {
+                        const uniqueDays = Array.from(new Set(newSchedule.workoutDays.map(d => d.workoutDayNumber))).sort();
+                        const presetDays = {};
+
+                        uniqueDays.forEach((dayNum, index) => {
+                            const presetDayNum = (index % Object.keys(preset.workoutDays).length) + 1;
+                            const presetDay = preset.workoutDays[presetDayNum];
+                            if (presetDay) {
+                                presetDays[dayNum] = {
+                                    name: presetDay.name,
+                                    exercises: [...presetDay.exercises]
+                                };
+                            }
+                        });
+
+                        setWorkoutDays(presetDays);
+                        setStep(4); // Skip exercise building, go straight to confirm
+                        return;
+                    }
+                }
+
+                // Normal flow - Initialize empty workout days
                 const uniqueDays = Array.from(new Set(newSchedule.workoutDays.map(d => d.workoutDayNumber))).sort();
                 const initialDays = {};
                 uniqueDays.forEach(dayNum => {
@@ -1075,11 +1172,14 @@
                 onComplete();
             };
 
+            const presetTemplate = isCoachMode && coachIdentifier ? getPresetTemplate(coachIdentifier) : null;
+
             return (
                 <div className="wizard-overlay">
                     <div className="wizard-container">
-                        {step === 1 && <WelcomeStep onNext={goNext} />}
-                        {step === 2 && <ScheduleStep onNext={handleScheduleComplete} onBack={goBack} />}
+                        {step === 1 && <WelcomeStep onNext={goNext} onCoach={handleCoachMode} />}
+                        {step === 1.5 && <CoachIdStep onNext={handleCoachIdVerified} onBack={() => { setIsCoachMode(false); setStep(1); }} />}
+                        {step === 2 && <ScheduleStep onNext={handleScheduleComplete} onBack={goBack} isCoachMode={isCoachMode} presetTemplate={presetTemplate} />}
                         {step === 3 && <ExerciseBuildingStep schedule={schedule} initialWorkoutDays={workoutDays} onNext={handleExercisesComplete} onBack={goBack} />}
                         {step === 4 && <ConfirmStep schedule={schedule} workoutDays={workoutDays} onComplete={handleComplete} onBack={goBack} />}
                     </div>
@@ -1087,7 +1187,7 @@
             );
         }
 
-        function WelcomeStep({ onNext }) {
+        function WelcomeStep({ onNext, onCoach }) {
             return (
                 <>
                     <div className="wizard-header">
@@ -1117,15 +1217,92 @@
 
                     <div className="wizard-buttons">
                         <button className="wizard-btn" onClick={onNext}>Get Started</button>
+                        <button className="wizard-btn" style={{ background: '#2a2a3a', marginTop: '10px' }} onClick={onCoach}>I Have a Coach</button>
                     </div>
                 </>
             );
         }
 
-        function ScheduleStep({ onNext, onBack }) {
+        function CoachIdStep({ onNext, onBack }) {
+            const [doomId, setDoomId] = useState('');
+            const [error, setError] = useState('');
+
+            const handleSubmit = () => {
+                const identifier = verifyDoomId(doomId.trim());
+                if (identifier) {
+                    onNext(identifier);
+                } else {
+                    setError('Invalid ID. Please check with your coach.');
+                }
+            };
+
+            return (
+                <>
+                    <div className="wizard-header">
+                        <div className="wizard-icon">🔑</div>
+                        <h1 className="wizard-title">Enter Your Coach ID</h1>
+                        <p className="wizard-subtitle">Enter the unique ID provided by your coach</p>
+                    </div>
+
+                    <div className="wizard-progress">
+                        <div className="wizard-progress-dot active"></div>
+                        <div className="wizard-progress-dot"></div>
+                        <div className="wizard-progress-dot"></div>
+                        <div className="wizard-progress-dot"></div>
+                    </div>
+
+                    <div className="wizard-content">
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#b8b8d0', fontSize: '14px' }}>
+                                Coach ID
+                            </label>
+                            <input
+                                type="text"
+                                value={doomId}
+                                onChange={(e) => {
+                                    setDoomId(e.target.value);
+                                    setError('');
+                                }}
+                                placeholder="Enter your ID"
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    background: '#1a1a2a',
+                                    border: error ? '2px solid #ff4444' : '1px solid #2a2a3a',
+                                    borderRadius: '8px',
+                                    color: '#b8b8d0',
+                                    fontSize: '16px',
+                                    outline: 'none'
+                                }}
+                                onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                            />
+                            {error && (
+                                <p style={{ color: '#ff4444', fontSize: '12px', marginTop: '8px' }}>
+                                    {error}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="wizard-buttons">
+                        <button className="wizard-btn-secondary" onClick={onBack}>Back</button>
+                        <button className="wizard-btn" onClick={handleSubmit}>Continue</button>
+                    </div>
+                </>
+            );
+        }
+
+        function ScheduleStep({ onNext, onBack, isCoachMode, presetTemplate }) {
             const [schedule, setSchedule] = useState([]);
 
             const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+            // Get max days allowed based on preset template
+            const maxDays = isCoachMode && presetTemplate
+                ? Object.keys(presetTemplate.workoutDays).length
+                : Infinity;
+
+            const daysRemaining = maxDays === Infinity ? 0 : maxDays - schedule.length;
 
             const toggleDay = (dayOfWeek) => {
                 const existingDay = schedule.find(d => d.dayOfWeek === dayOfWeek);
@@ -1134,6 +1311,11 @@
                     // Remove this day
                     setSchedule(schedule.filter(d => d.dayOfWeek !== dayOfWeek));
                 } else {
+                    // Check if we've reached the max for coach mode
+                    if (isCoachMode && schedule.length >= maxDays) {
+                        return; // Don't allow more days
+                    }
+
                     // Add this day - assign next available workout day number
                     const usedDayNumbers = new Set(schedule.map(d => d.workoutDayNumber));
                     let nextDayNumber = 1;
@@ -1166,7 +1348,17 @@
                 <>
                     <div className="wizard-header">
                         <h1 className="wizard-title">Set Your Schedule</h1>
-                        <p className="wizard-subtitle">Which days will you work out?</p>
+                        <p className="wizard-subtitle">
+                            {isCoachMode && presetTemplate ? (
+                                <>
+                                    {presetTemplate.name}
+                                    <br />
+                                    <span style={{ fontSize: '14px', color: '#6a5a8a' }}>{maxDays}-day Split</span>
+                                </>
+                            ) : (
+                                'Which days will you work out?'
+                            )}
+                        </p>
                     </div>
 
                     <div className="wizard-progress">
@@ -1177,12 +1369,31 @@
                     </div>
 
                     <div className="wizard-content">
+                        {isCoachMode && daysRemaining > 0 && (
+                            <div style={{
+                                textAlign: 'center',
+                                marginBottom: '20px',
+                                fontSize: '14px',
+                                color: '#8a8aa0',
+                                padding: '12px',
+                                background: '#1a1a2a',
+                                borderRadius: '8px',
+                                border: '1px solid #2a2a3a'
+                            }}>
+                                Pick {daysRemaining} More {daysRemaining === 1 ? 'Day' : 'Days'}
+                            </div>
+                        )}
+
                         <div className="calendar-grid">
                             {daysOfWeek.map(day => (
                                 <div
                                     key={day}
                                     className={`calendar-day ${isActive(day) ? 'active' : 'rest'}`}
                                     onClick={() => toggleDay(day)}
+                                    style={{
+                                        opacity: (isCoachMode && !isActive(day) && schedule.length >= maxDays) ? 0.3 : 1,
+                                        cursor: (isCoachMode && !isActive(day) && schedule.length >= maxDays) ? 'not-allowed' : 'pointer'
+                                    }}
                                 >
                                     <div className="calendar-day-name">{day.substring(0, 3)}</div>
                                     <div className="calendar-day-number">
@@ -1196,7 +1407,7 @@
 
                     <div className="wizard-buttons">
                         <button className="wizard-btn secondary" onClick={onBack}>Back</button>
-                        <button className="wizard-btn" onClick={handleContinue} disabled={schedule.length === 0}>
+                        <button className="wizard-btn" onClick={handleContinue} disabled={isCoachMode ? schedule.length !== maxDays : schedule.length === 0}>
                             Continue
                         </button>
                     </div>
