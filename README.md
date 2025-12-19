@@ -51,7 +51,3 @@ Planned additions include:
 - Workout templates for common programs
 - Additional exercise type customizations
 - Community-contributed features
-
-## License
-
-MIT
