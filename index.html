@@ -896,7 +896,8 @@
         // Verify doom_id against manifest
         function verifyDoomId(doomId) {
             const manifest = {
-                'D0O0O0M1': 'lexi'
+                'D0O0O0M1': 'lexi',
+                'D1O9O9M2': 'jessi'
             };
             return manifest[doomId] || null;
         }
@@ -904,6 +905,7 @@
         // Get preset template by identifier
         function getPresetTemplate(identifier) {
             const templates = {
+
                 'lexi': {
                     name: 'Upper/Lower Split',
                     workoutDays: {
@@ -932,8 +934,34 @@
                             ]
                         }
                     }
+                },
+
+                'jessi': {
+                    name: 'Full Body Split',
+                    bypassSchedule: true,
+                    workoutDays: {
+                        1: {
+                            name: 'Full Body',
+                            exercises: [
+                                { name: 'Flat Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Shoulder Press Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Preacher Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Tricep Pushdowns', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Wide Grip Lat Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Upper Back Row Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Neutral Grip Row Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Leg Extensions', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Adduction Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Calf Raise Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Seated Leg Curls', sets: 1, minReps: 6, maxReps: 8 },
+                            ]
+                        }
+
+                    }
                 }
+
             };
+
             return templates[identifier] || null;
         }
 
@@ -1067,7 +1095,29 @@
 
             const handleCoachIdVerified = (identifier) => {
                 setCoachIdentifier(identifier);
-                setStep(2); // Go to schedule step
+                const preset = getPresetTemplate(identifier);
+
+                // Check if template has bypassSchedule enabled
+                if (preset && preset.bypassSchedule) {
+                    // Create a default 3-day schedule with the same workout
+                    const defaultSchedule = {
+                        workoutDays: [
+                            { dayOfWeek: 'Monday', workoutDayNumber: 1 },
+                            { dayOfWeek: 'Wednesday', workoutDayNumber: 1 },
+                            { dayOfWeek: 'Friday', workoutDayNumber: 1 }
+                        ],
+                        totalWorkoutDays: 1
+                    };
+                    setSchedule(defaultSchedule);
+
+                    // Set the preset workout days
+                    setWorkoutDays(preset.workoutDays);
+
+                    // Skip directly to confirmation step
+                    setStep(4);
+                } else {
+                    setStep(2); // Go to schedule step
+                }
             };
 
             const handleScheduleComplete = (newSchedule) => {
@@ -1285,7 +1335,7 @@
                     </div>
 
                     <div className="wizard-buttons">
-                        <button className="wizard-btn secondary" onClick={onBack}>Back</button>
+			<button className="wizard-btn secondary" onClick={onBack}>Back</button>
                         <button className="wizard-btn" onClick={handleSubmit}>Continue</button>
                     </div>
                 </>
@@ -2491,6 +2541,19 @@
             const logExercise = (exerciseId) => {
                 const exercise = getCurrentExercises().find(e => e.id === exerciseId);
                 let data = workoutData[exerciseId] || {};
+
+                // Capture auto-filled weight if user didn't manually enter it
+                if ((exercise.type === 'standard' || (!exercise.type && !exercise.isCardio && exercise.typeId !== 'cardio')) && !data.weight && data.reps) {
+                    // Find the weight input field for this exercise and read its displayed value
+                    const exerciseCard = document.querySelector(`[data-exercise-id="${exerciseId}"]`);
+                    if (exerciseCard) {
+                        // Find the weight input (it's the first number input with inputmode="decimal")
+                        const weightInput = exerciseCard.querySelector('input[type="number"][inputmode="decimal"]');
+                        if (weightInput && weightInput.value) {
+                            data = { ...data, weight: weightInput.value };
+                        }
+                    }
+                }
 
                 // Validate data based on exercise type and set field errors
                 const errors = {};
@@ -3843,7 +3906,7 @@
                         parseInt(data.rounds) > parseInt(previous.rounds);
 
                     return (
-                        <div key={exercise.id} className={`exercise-card ${isLogged ? 'logged' : ''}`}>
+                        <div key={exercise.id} data-exercise-id={exercise.id} className={`exercise-card ${isLogged ? 'logged' : ''}`}>
                             <div className="exercise-header">
                                 <div>
                                     <div className="exercise-name">
@@ -3922,7 +3985,7 @@
                     }
 
                     return (
-                        <div key={exercise.id} className={`exercise-card ${isLogged ? 'logged' : ''}`}>
+                        <div key={exercise.id} data-exercise-id={exercise.id} className={`exercise-card ${isLogged ? 'logged' : ''}`}>
                             <div className="exercise-header">
                                 <div>
                                     <div className="exercise-name">
@@ -3988,7 +4051,7 @@
 
                 if (exercise.type === 'bodyweight') {
                     return (
-                        <div key={exercise.id} className={`exercise-card ${isLogged ? 'logged' : ''}`}>
+                        <div key={exercise.id} data-exercise-id={exercise.id} className={`exercise-card ${isLogged ? 'logged' : ''}`}>
                             <div className="exercise-header">
                                 <div>
                                     <div className="exercise-name">{exercise.name}</div>
@@ -4045,7 +4108,7 @@
                     const placeholderSeconds = previous?.seconds || exercise.seconds || 0;
 
                     return (
-                        <div key={exercise.id} className={`exercise-card ${isLogged ? 'logged' : ''}`}>
+                        <div key={exercise.id} data-exercise-id={exercise.id} className={`exercise-card ${isLogged ? 'logged' : ''}`}>
                             <div className="exercise-header">
                                 <div>
                                     <div className="exercise-name">
@@ -4120,7 +4183,7 @@
                 const placeholderReps = previous?.reps || '';
 
                 return (
-                    <div key={exercise.id} className={`exercise-card ${isLogged ? 'logged' : ''}`}>
+                    <div key={exercise.id} data-exercise-id={exercise.id} className={`exercise-card ${isLogged ? 'logged' : ''}`}>
                         <div className="exercise-header">
                             <div>
                                 <div className="exercise-name">
@@ -4145,7 +4208,7 @@
                                     type="number"
                                     inputMode="decimal"
                                     className={`input-field ${fieldErrors[`${exercise.id}-weight`] ? 'error' : ''}`}
-                                    value={data.weight || ''}
+                                    value={data.weight !== undefined ? data.weight : (previous?.weight || '')}
                                     onChange={(e) => handleInputChange(exercise.id, 'weight', e.target.value)}
                                     placeholder={placeholderWeight}
                                     disabled={isLogged}
