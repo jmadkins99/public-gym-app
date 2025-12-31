@@ -945,7 +945,8 @@
         function verifyDoomId(doomId) {
             const manifest = {
                 'D0O0O0M1': 'lexi',
-                'D1O9O9M2': 'jessi'
+                'D1O9O9M2': 'jessi',
+                'D6O9O6M9': 'graciepoo'
             };
             return manifest[doomId] || null;
         }
@@ -1002,6 +1003,29 @@
                                 { name: 'Hip Adduction Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Calf Raise Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Seated Leg Curls', sets: 1, minReps: 6, maxReps: 8 },
+                            ]
+                        }
+
+                    }
+                },
+
+                'graciepoo': {
+                    name: 'Full Body Split',
+                    bypassSchedule: true,
+                    workoutDays: {
+                        1: {
+                            name: 'Full Body',
+                            exercises: [
+                                { name: 'Romanian Deadlifts', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Seated Leg Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Pendulum Squat', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Thrusts', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Adductor Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Glute Kickbacks', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Leg Extensions', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Standing Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Neutral Grip Row Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
                             ]
                         }
 
