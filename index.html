@@ -840,15 +840,19 @@
             const today = new Date();
             const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
 
+            // Map day numbers to day names
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const todayName = dayNames[dayOfWeek];
+
             // Find today's workout day from schedule
-            const todayWorkout = schedule.workoutDays.find(wd => wd.dayOfWeek === dayOfWeek);
+            const todayWorkout = schedule.workoutDays.find(wd => wd.dayOfWeek === todayName);
 
             if (todayWorkout) {
-                return todayWorkout.workoutDay;
+                return todayWorkout.workoutDayNumber;
             }
 
-            // If today is not a workout day, return the last workout day or default to 1
-            return schedule.workoutDays.length > 0 ? schedule.workoutDays[0].workoutDay : 1;
+            // If today is not a workout day, return the first workout day or default to 1
+            return schedule.workoutDays.length > 0 ? schedule.workoutDays[0].workoutDayNumber : 1;
         }
 
         // Get the Monday of the week containing a given date
@@ -991,11 +995,12 @@
                 },
 
                 'jessi': {
-                    name: 'Full Body Split',
+                    name: 'Upper/Lower Split',
                     bypassSchedule: true,
+                    schedule: ['Tuesday', 'Wednesday'],
                     workoutDays: {
                         1: {
-                            name: 'Full Body',
+                            name: 'Upper',
                             exercises: [
                                 { name: 'Flat Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Shoulder Press Machine', sets: 1, minReps: 6, maxReps: 8 },
@@ -1004,6 +1009,12 @@
                                 { name: 'Wide Grip Lat Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Upper Back Row Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Neutral Grip Row Machine', sets: 1, minReps: 6, maxReps: 8 },
+                            ]
+                        },
+
+                        2: {
+                            name: 'Lower',
+                            exercises: [
                                 { name: 'Leg Extensions', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Hip Adduction Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Calf Raise Machine', sets: 1, minReps: 6, maxReps: 8 },
@@ -1176,22 +1187,81 @@
 
                 // Check if template has bypassSchedule enabled
                 if (preset && preset.bypassSchedule) {
-                    // Create a default 3-day schedule with the same workout
-                    const defaultSchedule = {
-                        workoutDays: [
-                            { dayOfWeek: 'Monday', workoutDayNumber: 1 },
-                            { dayOfWeek: 'Wednesday', workoutDayNumber: 1 },
-                            { dayOfWeek: 'Friday', workoutDayNumber: 1 }
-                        ],
-                        totalWorkoutDays: 1
-                    };
-                    setSchedule(defaultSchedule);
+                    // Auto-detect number of workout days in preset
+                    const numWorkoutDays = Object.keys(preset.workoutDays).length;
 
-                    // Set the preset workout days
+                    // Use custom schedule from preset, or default to Mon/Wed/Fri
+                    const weekDays = preset.schedule || ['Monday', 'Wednesday', 'Friday'];
+                    const scheduleWorkoutDays = weekDays.map((day, index) => ({
+                        dayOfWeek: day,
+                        workoutDayNumber: (index % numWorkoutDays) + 1
+                    }));
+
+                    const generatedSchedule = {
+                        workoutDays: scheduleWorkoutDays,
+                        totalWorkoutDays: numWorkoutDays
+                    };
+
+                    setSchedule(generatedSchedule);
                     setWorkoutDays(preset.workoutDays);
 
-                    // Skip directly to confirmation step
-                    setStep(4);
+                    // Trigger completion immediately to bypass all setup screens
+                    // Using setTimeout to ensure state updates have propagated
+                    setTimeout(() => {
+                        // Convert to exercise config format
+                        const exercisesByDay = {};
+                        const allCategories = new Set();
+
+                        Object.entries(preset.workoutDays).forEach(([dayNum, dayData]) => {
+                            exercisesByDay[dayNum] = dayData.exercises.map((ex, idx) => {
+                                if (ex.isCardio) {
+                                    return {
+                                        id: generateUUID(),
+                                        name: ex.name,
+                                        category: dayData.name,
+                                        typeId: 'cardio',
+                                        isCardio: true,
+                                        intensity: ex.intensity || '',
+                                        minutes: ex.minutes || 0,
+                                        seconds: ex.seconds || 0,
+                                        order: idx
+                                    };
+                                } else {
+                                    return {
+                                        id: generateUUID(),
+                                        name: ex.name,
+                                        category: dayData.name,
+                                        typeId: 'standard',
+                                        sets: ex.sets || 3,
+                                        minReps: ex.minReps || 8,
+                                        maxReps: ex.maxReps || 12,
+                                        order: idx
+                                    };
+                                }
+                            });
+                            allCategories.add(dayData.name);
+                        });
+
+                        // Save to localStorage
+                        storage.setItem('gymSetupCompleted', JSON.stringify({
+                            version: 1,
+                            completed: true,
+                            completedAt: new Date().toISOString()
+                        }));
+
+                        storage.setItem('gymScheduleConfig', JSON.stringify({
+                            version: 2,
+                            ...generatedSchedule
+                        }));
+
+                        storage.setItem('gymExerciseConfig', JSON.stringify({
+                            version: 2,
+                            days: exercisesByDay,
+                            categories: Array.from(allCategories)
+                        }));
+
+                        onComplete();
+                    }, 0);
                 } else {
                     setStep(2); // Go to schedule step
                 }
