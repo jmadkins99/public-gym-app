@@ -955,7 +955,8 @@
             const manifest = {
                 'D0O0O0M1': 'lexi',
                 'D1O9O9M2': 'jessi',
-                'D6O9O6M9': 'graciepoo'
+                'D6O9O6M9': 'graciepoo',
+                'B1G4RK': 'noah'
             };
             return manifest[doomId] || null;
         }
@@ -1044,6 +1045,39 @@
                                 { name: 'Standing Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Neutral Grip Row Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
+                            ]
+                        }
+
+                    }
+                },
+
+                'noah': {
+                    name: 'Upper/Lower Split',
+                    bypassSchedule: true,
+                    schedule: ['Monday', 'Wednesday', 'Thurdsay', 'Saturday'],
+                    workoutDays: {
+                        1: {
+                            name: 'Lower',
+                            exercises: [
+                                { name: 'Leg Extensions', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Seated Leg Curls', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Pendulum Squat', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Thrusts', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Adduction Machine', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Calf Raise Machine', sets: 2, minReps: 6, maxReps: 8 },
+                            ]
+                        },
+
+                        2: {
+                            name: 'Upper',
+                            exercises: [
+                                { name: 'Flat Chest Press Machine', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Shoulder Press Machine', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Preacher Curls', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Tricep Pushdowns', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Wide Grip Lat Pulldowns', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Upper Back Row Machine', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Neutral Grip Row Machine', sets: 2, minReps: 6, maxReps: 8 },
                             ]
                         }
 
