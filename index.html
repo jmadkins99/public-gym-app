@@ -2827,12 +2827,12 @@
                     }
                 }
 
-                // Check last backup reminder
+                // Check last backup reminder (monthly only, not on first time)
                 const lastReminder = storage.getItem('lastBackupReminder');
                 const now = new Date().getTime();
                 const oneMonth = 30 * 24 * 60 * 60 * 1000;
 
-                if (!lastReminder || (now - parseInt(lastReminder)) > oneMonth) {
+                if (lastReminder && (now - parseInt(lastReminder)) > oneMonth) {
                     setShowBackupReminder(true);
                 }
             }, []);
@@ -3510,6 +3510,12 @@
                                     }
                                 }
 
+                                // Show tutorial for new users (both custom and coaching programs)
+                                const hasSeenTutorial = storage.getItem('hasSeenTutorial');
+                                if (!hasSeenTutorial) {
+                                    setShowTutorial(true);
+                                }
+
                                 setShowWizard(false);
                             }}
                         />
@@ -3738,7 +3744,7 @@
                             <div style={{ color: '#8a8aa0', fontSize: '14px', lineHeight: '1.5', paddingLeft: '44px' }}>
                                 When you're done logging all exercises, tap <strong style={{ color: '#b8b8d0' }}>Submit Day and View Breakdown</strong> at the bottom.
                                 <div style={{ marginTop: '8px', fontSize: '12px', color: '#6a5a8a' }}>
-                                    ↳ This locks your workout and shows your progress summary
+                                    ↳ This submits your workout for the day and shows your progress summary
                                 </div>
                             </div>
                         </div>
