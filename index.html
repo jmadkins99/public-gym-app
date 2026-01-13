@@ -810,6 +810,156 @@
             color: #b8b8d0;
             font-weight: 600;
         }
+
+        /* Welcome Animation Styles */
+        .welcome-animation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #0a0a15 0%, #1a1a2e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .welcome-animation-content {
+            text-align: center;
+            animation: slideUp 0.8s ease-out;
+        }
+
+        .circular-loader-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .circular-loader {
+            position: absolute;
+            width: 700px;
+            height: 700px;
+            transform: rotate(-90deg);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .loader-progress {
+            stroke-dasharray: 565.49; /* 2 * PI * 90 */
+            stroke-dashoffset: 565.49;
+            animation: loadProgress 6s ease-out forwards;
+        }
+
+        .welcome-text-container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .welcome-greeting {
+            font-size: 48px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffffff 0%, #b8b8d0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -1px;
+            animation: fadeInText 1s ease-out 0.3s both;
+        }
+
+        .welcome-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            animation: fadeInText 1s ease-out 0.6s both;
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-dots .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6a5a8a 0%, #8a7aaa 100%);
+            animation: pulse 1.4s ease-in-out infinite;
+        }
+
+        .loading-dots .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dots .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .loading-text {
+            font-size: 16px;
+            color: #8a8aa0;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeInText {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.6;
+            }
+            50% {
+                transform: scale(1.3);
+                opacity: 1;
+            }
+        }
+
+        @keyframes loadProgress {
+            from {
+                stroke-dashoffset: 565.49;
+            }
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -956,7 +1106,8 @@
                 'D0O0O0M1': 'lexi',
                 'D1O9O9M2': 'jessi',
                 'D6O9O6M9': 'graciepoo',
-                'B1G4RK': 'noah'
+                'B1G4RK': 'noah',
+                'D2O9O9M1': 'shawn'
             };
             return manifest[doomId] || null;
         }
@@ -967,7 +1118,10 @@
 
                 'lexi': {
                     name: 'Upper/Lower Split',
+                    prTracking: true,
+                    bypassSchedule: true,
                     workoutDays: {
+
                         1: {
                             name: 'Upper',
                             exercises: [
@@ -977,9 +1131,10 @@
                                 { name: 'Lat Pulldown', sets: 3, minReps: 8, maxReps: 12 },
                                 { name: 'Dumbbell Lateral Raise', sets: 3, minReps: 12, maxReps: 15 },
                                 { name: 'Cable Bicep Curl', sets: 3, minReps: 10, maxReps: 12 },
-                                { name: 'Tricep Rope Pushdown', sets: 3, minReps: 10, maxReps: 12 }
+                                { name: 'Tricep Rope Pushdown', sets: 3, minReps: 10, maxReps: 12 },
                             ]
                         },
+
                         2: {
                             name: 'Lower',
                             exercises: [
@@ -989,17 +1144,20 @@
                                 { name: 'Leg Curl', sets: 3, minReps: 10, maxReps: 12 },
                                 { name: 'Leg Extension', sets: 3, minReps: 10, maxReps: 12 },
                                 { name: 'Calf Raise', sets: 4, minReps: 12, maxReps: 15 },
-                                { name: 'Plank', sets: 3, minReps: 30, maxReps: 60 }
+                                { name: 'Plank', sets: 3, minReps: 30, maxReps: 60 },
                             ]
+
                         }
                     }
                 },
 
                 'jessi': {
                     name: 'Upper/Lower Split',
+                    prTracking: true,
                     bypassSchedule: true,
                     schedule: ['Tuesday', 'Wednesday'],
                     workoutDays: {
+
                         1: {
                             name: 'Upper',
                             exercises: [
@@ -1023,6 +1181,7 @@
                                 { name: 'Hip Adduction Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Calf Raise Machine', sets: 1, minReps: 6, maxReps: 8 },
                             ]
+
                         }
 
                     }
@@ -1030,8 +1189,10 @@
 
                 'graciepoo': {
                     name: 'Full Body Split',
+                    prTracking: true,
                     bypassSchedule: true,
                     workoutDays: {
+
                         1: {
                             name: 'Full Body',
                             exercises: [
@@ -1046,6 +1207,7 @@
                                 { name: 'Neutral Grip Row Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
                             ]
+
                         }
 
                     }
@@ -1053,9 +1215,11 @@
 
                 'noah': {
                     name: 'Upper/Lower Split',
+                    prTracking: true,
                     bypassSchedule: true,
-                    schedule: ['Monday', 'Wednesday', 'Thurdsay', 'Saturday'],
+                    schedule: ['Monday', 'Wednesday', 'Thursday', 'Saturday'],
                     workoutDays: {
+
                         1: {
                             name: 'Lower',
                             exercises: [
@@ -1078,7 +1242,80 @@
                                 { name: 'Wide Grip Lat Pulldowns', sets: 2, minReps: 6, maxReps: 8 },
                                 { name: 'Upper Back Row Machine', sets: 2, minReps: 6, maxReps: 8 },
                                 { name: 'Neutral Grip Row Machine', sets: 2, minReps: 6, maxReps: 8 },
+
                             ]
+                        }
+
+                    }
+                },
+
+                'shawn': {
+                    name: 'Push - Pull - Legs - Upper - Lower Split',
+                    prTracking: true,
+                    bypassSchedule: true,
+                    schedule: ['Monday', 'Tuesday', 'Wednesday', 'Friday', 'Saturday'],
+                    workoutDays: {
+
+                        1: {
+                            name: 'Legs',
+                            exercises: [
+                                { name: 'Leg Extensions', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Seated Leg Curls', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Pendulum Squat', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Thrusts', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Adduction Machine', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Calf Raise Machine', sets: 2, minReps: 6, maxReps: 8 },
+                            ]
+                        },
+
+                        2: {
+                            name: 'Pull',
+                            exercises: [
+                                { name: 'Flat Chest Press Machine', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Shoulder Press Machine', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Preacher Curls', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Tricep Pushdowns', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Wide Grip Lat Pulldowns', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Upper Back Row Machine', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Neutral Grip Row Machine', sets: 2, minReps: 6, maxReps: 8 },
+                            ]
+                        },
+
+                        3: {
+                            name: 'Push',
+                            exercises: [
+                                { name: 'Leg Extensions', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Seated Leg Curls', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Pendulum Squat', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Thrusts', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Adduction Machine', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Calf Raise Machine', sets: 2, minReps: 6, maxReps: 8 },
+                            ]
+                        },
+
+                        4: {
+                            name: 'Lower',
+                            exercises: [
+                                { name: 'Leg Extensions', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Seated Leg Curls', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Pendulum Squat', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Thrusts', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Adduction Machine', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Calf Raise Machine', sets: 2, minReps: 6, maxReps: 8 },
+                            ]
+                        },
+
+                        5: {
+                            name: 'Upper',
+                            exercises: [
+                                { name: 'Leg Extensions', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Seated Leg Curls', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Pendulum Squat', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Thrusts', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Adduction Machine', sets: 2, minReps: 6, maxReps: 8 },
+                                { name: 'Calf Raise Machine', sets: 2, minReps: 6, maxReps: 8 },
+                            ]
+
                         }
 
                     }
@@ -1196,12 +1433,71 @@
         // SETUP WIZARD COMPONENTS
         // ============================================================================
 
+        function WelcomeAnimation({ clientName }) {
+            return (
+                <div className="welcome-animation-overlay">
+                    <div className="welcome-animation-content">
+                        <div className="circular-loader-container">
+                            <svg className="circular-loader" viewBox="0 0 200 200">
+                                <defs>
+                                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style={{ stopColor: '#8a7aaa', stopOpacity: 1 }} />
+                                        <stop offset="100%" style={{ stopColor: '#6a5a8a', stopOpacity: 1 }} />
+                                    </linearGradient>
+                                    <filter id="glow">
+                                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                        <feMerge>
+                                            <feMergeNode in="coloredBlur"/>
+                                            <feMergeNode in="SourceGraphic"/>
+                                        </feMerge>
+                                    </filter>
+                                </defs>
+                                <circle
+                                    className="loader-bg"
+                                    cx="100"
+                                    cy="100"
+                                    r="90"
+                                    fill="none"
+                                    stroke="#2a2a3a"
+                                    strokeWidth="4"
+                                />
+                                <circle
+                                    className="loader-progress"
+                                    cx="100"
+                                    cy="100"
+                                    r="90"
+                                    fill="none"
+                                    stroke="url(#gradient)"
+                                    strokeWidth="4"
+                                    strokeLinecap="round"
+                                    filter="url(#glow)"
+                                />
+                            </svg>
+                            <div className="welcome-text-container">
+                                <div className="welcome-greeting">Welcome, {clientName}</div>
+                                <div className="welcome-loading">
+                                    <div className="loading-dots">
+                                        <span className="dot"></span>
+                                        <span className="dot"></span>
+                                        <span className="dot"></span>
+                                    </div>
+                                    <div className="loading-text">Loading your personalized coaching program</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         function SetupWizard({ onComplete }) {
             const [step, setStep] = useState(1);
             const [schedule, setSchedule] = useState(null);
             const [workoutDays, setWorkoutDays] = useState({}); // { 1: { name: 'Push', exercises: [...] }, 2: { ... } }
             const [isCoachMode, setIsCoachMode] = useState(false);
             const [coachIdentifier, setCoachIdentifier] = useState(null);
+            const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
+            const [clientName, setClientName] = useState('');
 
             const goNext = () => setStep(step + 1);
             const goBack = () => {
@@ -1219,10 +1515,17 @@
 
             const handleCoachIdVerified = (identifier) => {
                 setCoachIdentifier(identifier);
+
                 const preset = getPresetTemplate(identifier);
 
                 // Check if template has bypassSchedule enabled
                 if (preset && preset.bypassSchedule) {
+                    // Capitalize first letter of client name
+                    const name = identifier.charAt(0).toUpperCase() + identifier.slice(1);
+                    setClientName(name);
+
+                    // Show welcome animation only for bypass schedule programs
+                    setShowWelcomeAnimation(true);
                     // Auto-detect number of workout days in preset
                     const numWorkoutDays = Object.keys(preset.workoutDays).length;
 
@@ -1241,63 +1544,64 @@
                     setSchedule(generatedSchedule);
                     setWorkoutDays(preset.workoutDays);
 
-                    // Trigger completion immediately to bypass all setup screens
-                    // Using setTimeout to ensure state updates have propagated
-                    setTimeout(() => {
-                        // Convert to exercise config format
-                        const exercisesByDay = {};
-                        const allCategories = new Set();
+                    // Convert to exercise config format and save immediately (background loading)
+                    const exercisesByDay = {};
+                    const allCategories = new Set();
 
-                        Object.entries(preset.workoutDays).forEach(([dayNum, dayData]) => {
-                            exercisesByDay[dayNum] = dayData.exercises.map((ex, idx) => {
-                                if (ex.isCardio) {
-                                    return {
-                                        id: generateUUID(),
-                                        name: ex.name,
-                                        category: dayData.name,
-                                        typeId: 'cardio',
-                                        isCardio: true,
-                                        intensity: ex.intensity || '',
-                                        minutes: ex.minutes || 0,
-                                        seconds: ex.seconds || 0,
-                                        order: idx
-                                    };
-                                } else {
-                                    return {
-                                        id: generateUUID(),
-                                        name: ex.name,
-                                        category: dayData.name,
-                                        typeId: 'standard',
-                                        sets: ex.sets || 3,
-                                        minReps: ex.minReps || 8,
-                                        maxReps: ex.maxReps || 12,
-                                        order: idx
-                                    };
-                                }
-                            });
-                            allCategories.add(dayData.name);
+                    Object.entries(preset.workoutDays).forEach(([dayNum, dayData]) => {
+                        exercisesByDay[dayNum] = dayData.exercises.map((ex, idx) => {
+                            if (ex.isCardio) {
+                                return {
+                                    id: generateUUID(),
+                                    name: ex.name,
+                                    category: dayData.name,
+                                    typeId: 'cardio',
+                                    isCardio: true,
+                                    intensity: ex.intensity || '',
+                                    minutes: ex.minutes || 0,
+                                    seconds: ex.seconds || 0,
+                                    order: idx
+                                };
+                            } else {
+                                return {
+                                    id: generateUUID(),
+                                    name: ex.name,
+                                    category: dayData.name,
+                                    typeId: 'standard',
+                                    sets: ex.sets || 3,
+                                    minReps: ex.minReps || 8,
+                                    maxReps: ex.maxReps || 12,
+                                    order: idx
+                                };
+                            }
                         });
+                        allCategories.add(dayData.name);
+                    });
 
-                        // Save to localStorage
-                        storage.setItem('gymSetupCompleted', JSON.stringify({
-                            version: 1,
-                            completed: true,
-                            completedAt: new Date().toISOString()
-                        }));
+                    // Save to localStorage immediately so data is ready when animation finishes
+                    storage.setItem('gymSetupCompleted', JSON.stringify({
+                        version: 1,
+                        completed: true,
+                        completedAt: new Date().toISOString()
+                    }));
 
-                        storage.setItem('gymScheduleConfig', JSON.stringify({
-                            version: 2,
-                            ...generatedSchedule
-                        }));
+                    storage.setItem('gymScheduleConfig', JSON.stringify({
+                        version: 2,
+                        ...generatedSchedule
+                    }));
 
-                        storage.setItem('gymExerciseConfig', JSON.stringify({
-                            version: 2,
-                            days: exercisesByDay,
-                            categories: Array.from(allCategories)
-                        }));
+                    storage.setItem('gymExerciseConfig', JSON.stringify({
+                        version: 2,
+                        days: exercisesByDay,
+                        categories: Array.from(allCategories),
+                        prTracking: preset.prTracking || false
+                    }));
 
+                    // Wait for animation to complete, then hide and load app
+                    setTimeout(() => {
+                        setShowWelcomeAnimation(false);
                         onComplete();
-                    }, 0);
+                    }, 6000);
                 } else {
                     setStep(2); // Go to schedule step
                 }
@@ -1408,15 +1712,20 @@
             const presetTemplate = isCoachMode && coachIdentifier ? getPresetTemplate(coachIdentifier) : null;
 
             return (
-                <div className="wizard-overlay">
-                    <div className="wizard-container">
-                        {step === 1 && <WelcomeStep onNext={goNext} onCoach={handleCoachMode} />}
-                        {step === 1.5 && <CoachIdStep onNext={handleCoachIdVerified} onBack={() => { setIsCoachMode(false); setStep(1); }} />}
-                        {step === 2 && <ScheduleStep onNext={handleScheduleComplete} onBack={goBack} isCoachMode={isCoachMode} presetTemplate={presetTemplate} />}
-                        {step === 3 && <ExerciseBuildingStep schedule={schedule} initialWorkoutDays={workoutDays} onNext={handleExercisesComplete} onBack={goBack} />}
-                        {step === 4 && <ConfirmStep schedule={schedule} workoutDays={workoutDays} onComplete={handleComplete} onBack={goBack} />}
-                    </div>
-                </div>
+                <>
+                    {showWelcomeAnimation && <WelcomeAnimation clientName={clientName} />}
+                    {!showWelcomeAnimation && (
+                        <div className="wizard-overlay">
+                            <div className="wizard-container">
+                                {step === 1 && <WelcomeStep onNext={goNext} onCoach={handleCoachMode} />}
+                                {step === 1.5 && <CoachIdStep onNext={handleCoachIdVerified} onBack={() => { setIsCoachMode(false); setStep(1); }} />}
+                                {step === 2 && <ScheduleStep onNext={handleScheduleComplete} onBack={goBack} isCoachMode={isCoachMode} presetTemplate={presetTemplate} />}
+                                {step === 3 && <ExerciseBuildingStep schedule={schedule} initialWorkoutDays={workoutDays} onNext={handleExercisesComplete} onBack={goBack} />}
+                                {step === 4 && <ConfirmStep schedule={schedule} workoutDays={workoutDays} onComplete={handleComplete} onBack={goBack} />}
+                            </div>
+                        </div>
+                    )}
+                </>
             );
         }
 
@@ -2394,6 +2703,7 @@
             const [exercisesByDay, setExercisesByDay] = useState({});
             const [schedule, setSchedule] = useState(null);
             const [exerciseCategories, setExerciseCategories] = useState([]);
+            const [prTracking, setPrTracking] = useState(false);
             const [selectedExercise, setSelectedExercise] = useState('');
             const [celebration, setCelebration] = useState(null);
             const [showSettings, setShowSettings] = useState(false);
@@ -2475,6 +2785,11 @@
 
                         if (config.categories) {
                             setExerciseCategories(config.categories);
+                        }
+
+                        // Load prTracking flag
+                        if (config.prTracking !== undefined) {
+                            setPrTracking(config.prTracking);
                         }
                     }
                     // Fallback to old format for backward compatibility
@@ -2879,7 +3194,9 @@
                         category: exercise.category,
                         type: exercise.type,
                         weight: finalData.weight || '',
-                        reps: finalData.reps || ''
+                        reps: finalData.reps || '',
+                        minReps: exercise.minReps,
+                        maxReps: exercise.maxReps
                     };
                 }
 
@@ -3146,8 +3463,38 @@
                     {showWizard && (
                         <SetupWizard
                             onComplete={() => {
+                                // Load data directly instead of reloading page for instant transition
+                                const savedSchedule = storage.getItem('gymScheduleConfig');
+                                if (savedSchedule) {
+                                    setSchedule(JSON.parse(savedSchedule));
+                                }
+
+                                const savedExercises = storage.getItem('gymExerciseConfig');
+                                if (savedExercises) {
+                                    const config = JSON.parse(savedExercises);
+                                    if (config.version === 2 && config.days) {
+                                        const sortedDays = {};
+                                        Object.keys(config.days).forEach(dayNum => {
+                                            sortedDays[dayNum] = config.days[dayNum].sort((a, b) => a.order - b.order);
+                                        });
+                                        setExercisesByDay(sortedDays);
+
+                                        const allExercises = Object.values(sortedDays).flat();
+                                        if (allExercises.length > 0 && !selectedExercise) {
+                                            setSelectedExercise(allExercises[0].id);
+                                        }
+
+                                        if (config.categories) {
+                                            setExerciseCategories(config.categories);
+                                        }
+
+                                        if (config.prTracking !== undefined) {
+                                            setPrTracking(config.prTracking);
+                                        }
+                                    }
+                                }
+
                                 setShowWizard(false);
-                                window.location.reload(); // Reload to load new config
                             }}
                         />
                     )}
@@ -3246,6 +3593,8 @@
                             schedule={schedule}
                             exercisesByDay={exercisesByDay}
                             fieldErrors={fieldErrors}
+                            prTracking={prTracking}
+                            workoutHistory={workoutHistory}
                         />}
                         {currentView === 'weekly' && <WeeklyView
                             workoutHistory={workoutHistory}
@@ -4092,7 +4441,7 @@
             );
         }
 
-        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors }) {
+        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors, prTracking, workoutHistory }) {
             const exercises = getCurrentExercises();
             const todayDay = getTodayDay();
 
@@ -4108,10 +4457,74 @@
             // Get unique categories in order
             const categories = Object.keys(exercisesByCategory);
 
+            // Helper function to check for PR tracking recommendations
+            const getPRTrackingRecommendation = (exerciseId) => {
+                if (!workoutHistory || workoutHistory.length === 0) return null;
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                // Find most recent previous workout with valid data for this exercise
+                const previousWorkout = workoutHistory
+                    .filter(w => {
+                        const workoutDate = new Date(w.date);
+                        workoutDate.setHours(0, 0, 0, 0);
+                        if (w.day !== currentDay) return false;
+                        // Exclude future workouts
+                        if (workoutDate > today) return false;
+                        // Exclude today's unsubmitted workout
+                        if (workoutDate.getTime() === today.getTime() && !w.submitted) return false;
+
+                        // Check if this workout has valid data for this exercise
+                        const exercise = w.exercises.find(e => e.id === exerciseId);
+                        if (!exercise) return false;
+                        if (!exercise.reps || !exercise.weight) return false;
+                        if (exercise.reps === 'NA' || exercise.weight === 'NA') return false;
+                        return true;
+                    })
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
+                if (!previousWorkout) return null;
+
+                const previousExercise = previousWorkout.exercises.find(e => e.id === exerciseId);
+                if (!previousExercise || !previousExercise.reps || !previousExercise.maxReps || !previousExercise.minReps) return null;
+
+                const previousReps = parseInt(previousExercise.reps);
+                const maxReps = previousExercise.maxReps;
+                const minReps = previousExercise.minReps;
+
+                // Check if hit maxReps or higher (strength gains)
+                if (previousReps >= maxReps) {
+                    return {
+                        type: 'strength',
+                        message: 'Strength Gains Detected - Weight Increase Recommended',
+                        borderColor: '#4CAF50',
+                        textColor: '#4CAF50'
+                    };
+                }
+
+                // Check if below minReps (technique opportunity)
+                if (previousReps < minReps) {
+                    return {
+                        type: 'technique',
+                        message: 'Technique Opportunity Detected - Weight Decrease Recommended',
+                        borderColor: '#ff9500',
+                        textColor: '#ff9500'
+                    };
+                }
+
+                return null;
+            };
+
             const renderExercise = (exercise) => {
                 const previous = getPreviousWorkout(exercise.id);
                 const isLogged = loggedExercises[exercise.id];
                 const data = workoutData[exercise.id] || {};
+
+                // Check for PR tracking recommendations (only for standard exercises when prTracking is enabled)
+                const prRecommendation = prTracking && !isLogged && (exercise.type === 'standard' || (!exercise.type && !exercise.isCardio && exercise.typeId !== 'cardio'))
+                    ? getPRTrackingRecommendation(exercise.id)
+                    : null;
 
                 if (exercise.type === 'assault-bike') {
                     const isPROpportunity = previous && previous.rounds;
@@ -4292,14 +4705,14 @@
                                     />
                                 </div>
                                 <div className="input-group">
-                                    <label className="input-label">Reps on Last Set</label>
+                                    <label className="input-label">Reps on First Set</label>
                                     <input
                                         type="number"
                                         inputMode="numeric"
                                         className="input-field"
                                         value={data.reps || ''}
                                         onChange={(e) => handleInputChange(exercise.id, 'reps', e.target.value)}
-                                        placeholder={previous?.reps || '0'}
+                                        placeholder={prTracking && previous?.reps ? Math.max(parseInt(previous.reps) + 1, exercise.minReps || 0).toString() : (previous?.reps || '0')}
                                         disabled={isLogged}
                                     />
                                 </div>
@@ -4394,7 +4807,9 @@
 
                 // Standard exercise
                 const placeholderWeight = previous?.weight || '';
-                const placeholderReps = previous?.reps || '';
+                const placeholderReps = prTracking && previous?.reps
+                    ? Math.max(parseInt(previous.reps) + 1, exercise.minReps || 0).toString()
+                    : (previous?.reps || '');
 
                 return (
                     <div key={exercise.id} data-exercise-id={exercise.id} className={`exercise-card ${isLogged ? 'logged' : ''}`}>
@@ -4415,6 +4830,19 @@
                                 )}
                             </div>
                         </div>
+                        {prRecommendation && (
+                            <div style={{
+                                color: prRecommendation.textColor,
+                                padding: '8px 12px',
+                                borderRadius: '6px',
+                                marginBottom: '12px',
+                                fontWeight: '600',
+                                fontSize: '12px',
+                                textAlign: 'center'
+                            }}>
+                                {prRecommendation.message}
+                            </div>
+                        )}
                         <div className="input-row">
                             <div className="input-group">
                                 <label className="input-label">Weight (lbs)</label>
@@ -4426,10 +4854,13 @@
                                     onChange={(e) => handleInputChange(exercise.id, 'weight', e.target.value)}
                                     placeholder={placeholderWeight}
                                     disabled={isLogged}
+                                    style={prRecommendation ? {
+                                        border: `2px solid ${prRecommendation.borderColor}`
+                                    } : {}}
                                 />
                             </div>
                             <div className="input-group">
-                                <label className="input-label">Reps on Last Set</label>
+                                <label className="input-label">Reps on First Set</label>
                                 <input
                                     type="number"
                                     inputMode="numeric"
