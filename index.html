@@ -1133,7 +1133,7 @@
             const templates = {
 
                 'lexi': {
-                    name: 'Upper/Lower Split',
+                    name: 'Upper - Lower',
                     prTracking: true,
                     bypassSchedule: true,
                     workoutDays: {
@@ -1168,7 +1168,7 @@
                 },
 
                 'jessi': {
-                    name: 'Upper/Lower Split',
+                    name: 'Upper - Lower',
                     prTracking: true,
                     bypassSchedule: true,
                     schedule: ['Tuesday', 'Wednesday'],
@@ -1204,7 +1204,7 @@
                 },
 
                 'graciepoo': {
-                    name: 'Full Body Split',
+                    name: 'Full Body',
                     prTracking: true,
                     bypassSchedule: true,
                     workoutDays: {
@@ -1230,7 +1230,7 @@
                 },
 
                 'noah': {
-                    name: 'Upper/Lower Split',
+                    name: 'Upper - Lower',
                     prTracking: true,
                     bypassSchedule: true,
                     schedule: ['Monday', 'Wednesday', 'Thursday', 'Saturday'],
@@ -1266,73 +1266,66 @@
                 },
 
                 'shawn': {
-                    name: 'Push - Pull - Legs - Upper - Lower Split',
+                    name: 'Push - Pull - Legs - Upper - Lower',
                     prTracking: true,
                     bypassSchedule: true,
                     schedule: ['Monday', 'Tuesday', 'Wednesday', 'Friday', 'Saturday'],
                     workoutDays: {
 
-                        1: {
-                            name: 'Legs',
-                            exercises: [
-                                { name: 'Leg Extensions', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Seated Leg Curls', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Pendulum Squat', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Hip Thrusts', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Hip Adduction Machine', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Calf Raise Machine', sets: 2, minReps: 6, maxReps: 8 },
-                            ]
-                        },
-
-                        2: {
-                            name: 'Pull',
-                            exercises: [
-                                { name: 'Flat Chest Press Machine', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Shoulder Press Machine', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Preacher Curls', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Tricep Pushdowns', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Wide Grip Lat Pulldowns', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Upper Back Row Machine', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Neutral Grip Row Machine', sets: 2, minReps: 6, maxReps: 8 },
-                            ]
-                        },
-
-                        3: {
-                            name: 'Push',
-                            exercises: [
-                                { name: 'Leg Extensions', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Seated Leg Curls', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Pendulum Squat', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Hip Thrusts', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Hip Adduction Machine', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Calf Raise Machine', sets: 2, minReps: 6, maxReps: 8 },
-                            ]
-                        },
-
-                        4: {
-                            name: 'Lower',
-                            exercises: [
-                                { name: 'Leg Extensions', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Seated Leg Curls', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Pendulum Squat', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Hip Thrusts', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Hip Adduction Machine', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Calf Raise Machine', sets: 2, minReps: 6, maxReps: 8 },
-                            ]
-                        },
-
-                        5: {
-                            name: 'Upper',
-                            exercises: [
-                                { name: 'Leg Extensions', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Seated Leg Curls', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Pendulum Squat', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Hip Thrusts', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Hip Adduction Machine', sets: 2, minReps: 6, maxReps: 8 },
-                                { name: 'Calf Raise Machine', sets: 2, minReps: 6, maxReps: 8 },
-                            ]
-
-                        }
+			1: {
+			    name: 'Legs',
+			    exercises: [
+				{ name: 'Seated Leg Curls', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Leg Press', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Hip Thrusts', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Leg Extensions', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Standing Calf Raise Machine', sets: 2, minReps: 6, maxReps: 8 },
+			    ]
+			},
+			2: {
+			    name: 'Pull',
+			    exercises: [
+				{ name: 'Barbell Row', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Lat Pulldowns', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Seated Cable Row', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'DB Shrugs', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Face Pulls', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Incline DB Curls', sets: 2, minReps: 6, maxReps: 8 },
+			    ]
+			},
+			3: {
+			    name: 'Push',
+			    exercises: [
+				{ name: 'Flat DB Bench Press', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Seated DB OHP', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Chest Flies', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Tricep Pushdown', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Overhead Tricep Extension', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Cable Lateral Raises', sets: 2, minReps: 6, maxReps: 8 },
+			    ]
+			},
+			4: {
+			    name: 'Lower',
+			    exercises: [
+				{ name: 'Romanian Deadlift', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Hip Thrusts', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Lying Leg Curls', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Standing Calf Raise Machine', sets: 2, minReps: 6, maxReps: 8 },
+			    ]
+			},
+			5: {
+			    name: 'Upper',
+			    exercises: [
+				{ name: 'Seated DB OHP', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Pull-ups', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Incline DB Bench Press', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'DB Shrugs', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Machine Lateral Raises', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Tricep Pushdown', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'EZ Bar Curls', sets: 2, minReps: 6, maxReps: 8 },
+				{ name: 'Hammer Curls', sets: 2, minReps: 6, maxReps: 8 },
+			    ]
+			},
 
                     }
                 }
