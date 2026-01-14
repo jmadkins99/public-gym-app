@@ -4731,7 +4731,7 @@
                                         className="input-field"
                                         value={data.reps || ''}
                                         onChange={(e) => handleInputChange(exercise.id, 'reps', e.target.value)}
-                                        placeholder={prTracking && previous?.reps ? Math.max(parseInt(previous.reps) + 1, exercise.minReps || 0).toString() : (previous?.reps || '0')}
+                                        placeholder={prTracking && previous?.reps ? (parseInt(previous.reps) >= (exercise.maxReps || Infinity) ? (exercise.minReps || 0).toString() : Math.max(parseInt(previous.reps) + 1, exercise.minReps || 0).toString()) : (previous?.reps || '0')}
                                         disabled={isLogged}
                                     />
                                 </div>
@@ -4827,7 +4827,7 @@
                 // Standard exercise
                 const placeholderWeight = previous?.weight || '';
                 const placeholderReps = prTracking && previous?.reps
-                    ? Math.max(parseInt(previous.reps) + 1, exercise.minReps || 0).toString()
+                    ? (parseInt(previous.reps) >= (exercise.maxReps || Infinity) ? (exercise.minReps || 0).toString() : Math.max(parseInt(previous.reps) + 1, exercise.minReps || 0).toString())
                     : (previous?.reps || '');
 
                 return (
