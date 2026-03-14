@@ -1007,6 +1007,10 @@
             }
 
             const schedule = JSON.parse(savedSchedule);
+
+            // If the schedule wasn't explicitly set on the preset, don't highlight any day as today
+            if (!schedule.scheduleIsExplicit) return null;
+
             const today = new Date();
             const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
 
@@ -1021,8 +1025,8 @@
                 return todayWorkout.workoutDayNumber;
             }
 
-            // If today is not a workout day, return the first workout day or default to 1
-            return schedule.workoutDays.length > 0 ? schedule.workoutDays[0].workoutDayNumber : 1;
+            // If today is not a workout day, return null (no day to highlight)
+            return null;
         }
 
         // Get the Monday of the week containing a given date
@@ -1175,33 +1179,42 @@
                     name: 'Push - Pull - Legs',
                     advancedPrTracking: true,
                     bypassSchedule: true,
-                    schedule: ['Tuesday', 'Wednesday'],
                     workoutDays: {
 
                         1: {
-                            name: 'Upper',
+                            name: 'Push',
                             exercises: [
+                                { name: 'Tricep Pushdown', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Overhead Tricep Extension', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Flat Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Incline Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Cable Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Shoulder Press Machine', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Preacher Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Tricep Pushdowns', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Wide Grip Lat Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Upper Back Row Machine', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Neutral Grip Row Machine', sets: 1, minReps: 6, maxReps: 8 },
                             ]
                         },
 
                         2: {
-                            name: 'Lower',
+                            name: 'Pull',
                             exercises: [
-                                { name: 'Leg Extensions', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Seated Leg Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Pendulum Squat', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Hip Thrusts', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Hip Adduction Machine', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Calf Raise Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Preacher Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Upper Back Row Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Seated Row Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                             ]
+                        },
 
+                        3: {
+                            name: 'Legs',
+                            exercises: [
+                                { name: 'Pendulum Squats', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Stiff Legged Deadlifts', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Leg Extensions', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Ab Crunch Machine', sets: 1, minReps: 6, maxReps: 8 },
+                            ]
                         }
 
                     }
@@ -1589,7 +1602,8 @@
 
                     const generatedSchedule = {
                         workoutDays: scheduleWorkoutDays,
-                        totalWorkoutDays: numWorkoutDays
+                        totalWorkoutDays: numWorkoutDays,
+                        scheduleIsExplicit: !!preset.schedule
                     };
 
                     setSchedule(generatedSchedule);
