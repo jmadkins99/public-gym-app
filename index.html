@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="app-version" content="2026-04-16-ap-minimalist">
     <title>Gym Tracker</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -1175,25 +1179,28 @@
                 },
 
                 'jessi': {
-                    name: 'Push - Pull - Legs',
-                    advancedPrTracking: true,
+                    name: 'Anterior - Posterior',
+                    minimalistPrTracking: true,
                     bypassSchedule: true,
                     workoutDays: {
 
                         1: {
-                            name: 'Push',
+                            name: 'Anterior',
                             exercises: [
                                 { name: 'Tricep Pushdown', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Cable Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Overhead Tricep Extension', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Flat Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Incline Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Cable Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Shoulder Press Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Ab Crunch Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Pendulum Squats', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Leg Extensions', sets: 1, minReps: 6, maxReps: 8 },
                             ]
                         },
 
                         2: {
-                            name: 'Pull',
+                            name: 'Posterior',
                             exercises: [
                                 { name: 'Preacher Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
@@ -1202,17 +1209,8 @@
                                 { name: 'Seated Row Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
-                            ]
-                        },
-
-                        3: {
-                            name: 'Legs',
-                            exercises: [
-                                { name: 'Pendulum Squats', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Stiff Legged Deadlifts', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Leg Extensions', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Ab Crunch Machine', sets: 1, minReps: 6, maxReps: 8 },
                             ]
                         }
 
@@ -1659,7 +1657,8 @@
                         days: exercisesByDay,
                         categories: Array.from(allCategories),
                         prTracking: preset.prTracking || false,
-                        advancedPrTracking: preset.advancedPrTracking || false
+                        advancedPrTracking: preset.advancedPrTracking || false,
+                        minimalistPrTracking: preset.minimalistPrTracking || false
                     }));
 
                     // Wait for animation to complete, then hide and load app
@@ -2737,6 +2736,84 @@
             storage.setItem('gymWorkoutHistory', JSON.stringify(migratedHistory));
         }
 
+        // Detect Jessi's legacy PPL exerciseConfig and collapse day 3 into days 1+2
+        // for the new Anterior/Posterior split, preserving UUIDs + any custom names.
+        // Runs at most once (gated by the jessiAPMigrationApplied flag).
+        function migrateJessiToAnteriorPosterior() {
+            if (storage.getItem('jessiAPMigrationApplied') === 'true') return;
+
+            const raw = storage.getItem('gymExerciseConfig');
+            if (!raw) return;
+            let config;
+            try { config = JSON.parse(raw); } catch (e) { return; }
+
+            if (config.version !== 2 || !config.days) return;
+            const dayKeys = Object.keys(config.days || {});
+            if (dayKeys.length !== 3) return;
+            const cats = (config.categories || []).map(c => String(c).toLowerCase());
+            const isJessi = cats.length === 3
+                && cats.includes('push')
+                && cats.includes('pull')
+                && cats.includes('legs');
+            if (!isJessi) return;
+
+            const day1 = (config.days[1] || []).slice();
+            const day2 = (config.days[2] || []).slice();
+            const day3 = (config.days[3] || []).slice();
+
+            // Classify day-3 exercises as posterior if name contains hamstring/deadlift/calf cues
+            const isPosteriorName = (name) => {
+                const n = String(name || '').toLowerCase();
+                return /deadlift|romanian|hamstring|leg\s*curl|calf/.test(n);
+            };
+
+            const anterior = [];
+            const posterior = [];
+
+            day1.forEach(ex => anterior.push({ ...ex, category: 'Anterior' }));
+            day3.filter(ex => !isPosteriorName(ex.name)).forEach(ex => anterior.push({ ...ex, category: 'Anterior' }));
+            day2.forEach(ex => posterior.push({ ...ex, category: 'Posterior' }));
+            day3.filter(ex => isPosteriorName(ex.name)).forEach(ex => posterior.push({ ...ex, category: 'Posterior' }));
+
+            const reindex = (arr) => arr.map((ex, idx) => ({ ...ex, order: idx }));
+
+            const newConfig = {
+                ...config,
+                version: 2,
+                days: {
+                    1: reindex(anterior),
+                    2: reindex(posterior)
+                },
+                categories: ['Anterior', 'Posterior'],
+                prTracking: false,
+                advancedPrTracking: false,
+                minimalistPrTracking: true
+            };
+
+            storage.setItem('gymExerciseConfig', JSON.stringify(newConfig));
+
+            // Collapse schedule from 3 workout days to 2, remapping any day-3 entries to day-1.
+            const rawSchedule = storage.getItem('gymScheduleConfig');
+            if (rawSchedule) {
+                try {
+                    const sched = JSON.parse(rawSchedule);
+                    if (sched && Array.isArray(sched.workoutDays)) {
+                        const remappedDays = sched.workoutDays.map(d =>
+                            d.workoutDayNumber === 3 ? { ...d, workoutDayNumber: 1 } : d
+                        );
+                        const updatedSchedule = {
+                            ...sched,
+                            workoutDays: remappedDays,
+                            totalWorkoutDays: 2
+                        };
+                        storage.setItem('gymScheduleConfig', JSON.stringify(updatedSchedule));
+                    }
+                } catch (e) { /* leave schedule alone */ }
+            }
+
+            storage.setItem('jessiAPMigrationApplied', 'true');
+        }
+
         function createDefaultSchedule() {
             // Create a 2-day alternating schedule to preserve old behavior
             const defaultSchedule = {
@@ -2770,6 +2847,7 @@
             const [exerciseCategories, setExerciseCategories] = useState([]);
             const [prTracking, setPrTracking] = useState(false);
             const [advancedPrTracking, setAdvancedPrTracking] = useState(false);
+            const [minimalistPrTracking, setMinimalistPrTracking] = useState(false);
             const [selectedExercise, setSelectedExercise] = useState('');
             const [celebration, setCelebration] = useState(null);
             const [showSettings, setShowSettings] = useState(false);
@@ -2787,6 +2865,9 @@
             useEffect(() => {
                 // Migrate existing data to namespaced storage (one-time for existing users)
                 migrateToNamespacedStorage();
+
+                // One-shot Anterior/Posterior migration for Jessi's PPL data
+                migrateJessiToAnteriorPosterior();
 
                 // Check if setup is completed
                 const setupCompleted = storage.getItem('gymSetupCompleted');
@@ -2859,6 +2940,9 @@
                         }
                         if (config.advancedPrTracking !== undefined) {
                             setAdvancedPrTracking(config.advancedPrTracking);
+                        }
+                        if (config.minimalistPrTracking !== undefined) {
+                            setMinimalistPrTracking(config.minimalistPrTracking);
                         }
                     }
                     // Fallback to old format for backward compatibility
@@ -3019,13 +3103,24 @@
                 return todayWorkout && todayWorkout.submitted;
             };
 
-            const saveExerciseConfig = () => {
-                const config = {
+            // Build a full exercise-config payload, carrying forward any tracking flags
+            // stored alongside the config so they survive writes from rename/reorder/etc.
+            const buildExerciseConfig = (days) => {
+                const existingRaw = storage.getItem('gymExerciseConfig');
+                const existing = existingRaw ? (() => { try { return JSON.parse(existingRaw); } catch (e) { return {}; } })() : {};
+                return {
+                    ...existing,
                     version: 2,
-                    days: exercisesByDay,
-                    categories: exerciseCategories
+                    days,
+                    categories: exerciseCategories,
+                    prTracking,
+                    advancedPrTracking,
+                    minimalistPrTracking
                 };
-                storage.setItem('gymExerciseConfig', JSON.stringify(config));
+            };
+
+            const saveExerciseConfig = () => {
+                storage.setItem('gymExerciseConfig', JSON.stringify(buildExerciseConfig(exercisesByDay)));
             };
 
             const updateExerciseName = (day, exerciseId, newName, additionalProps = {}) => {
@@ -3036,13 +3131,7 @@
                             ex.id === exerciseId ? { ...ex, name: newName, ...additionalProps } : ex
                         )
                     };
-                    // Save immediately
-                    const config = {
-                        version: 2,
-                        days: updated,
-                        categories: exerciseCategories
-                    };
-                    storage.setItem('gymExerciseConfig', JSON.stringify(config));
+                    storage.setItem('gymExerciseConfig', JSON.stringify(buildExerciseConfig(updated)));
                     return updated;
                 });
             };
@@ -3066,13 +3155,7 @@
                         ...prev,
                         [day]: updated
                     };
-                    // Save immediately
-                    const config = {
-                        version: 2,
-                        days: updatedDays,
-                        categories: exerciseCategories
-                    };
-                    storage.setItem('gymExerciseConfig', JSON.stringify(config));
+                    storage.setItem('gymExerciseConfig', JSON.stringify(buildExerciseConfig(updatedDays)));
                     return updatedDays;
                 });
             };
@@ -3486,11 +3569,7 @@
             const exportData = () => {
                 const exportObj = {
                     workoutHistory,
-                    exerciseConfig: {
-                        version: 2,
-                        days: exercisesByDay,
-                        categories: exerciseCategories
-                    },
+                    exerciseConfig: buildExerciseConfig(exercisesByDay),
                     schedule: schedule,
                     exportDate: new Date().toISOString()
                 };
@@ -3551,6 +3630,16 @@
                                     }
                                     setExercisesByDay(days);
                                 }
+                                // Restore tracking flags into state
+                                if (imported.exerciseConfig.prTracking !== undefined) {
+                                    setPrTracking(imported.exerciseConfig.prTracking);
+                                }
+                                if (imported.exerciseConfig.advancedPrTracking !== undefined) {
+                                    setAdvancedPrTracking(imported.exerciseConfig.advancedPrTracking);
+                                }
+                                if (imported.exerciseConfig.minimalistPrTracking !== undefined) {
+                                    setMinimalistPrTracking(imported.exerciseConfig.minimalistPrTracking);
+                                }
                                 storage.setItem('gymExerciseConfig', JSON.stringify(imported.exerciseConfig));
                             }
                         }
@@ -3575,12 +3664,16 @@
                         storage.removeItem('gymSetupCompleted');
                         storage.removeItem('lastBackupReminder');
                         storage.removeItem('hasSeenTutorial');
+                        storage.removeItem('jessiAPMigrationApplied');
                         setWorkoutHistory([]);
                         setWorkoutData({});
                         setLoggedExercises({});
                         setExercisesByDay({});
                         setSchedule(null);
                         setExerciseCategories([]);
+                        setPrTracking(false);
+                        setAdvancedPrTracking(false);
+                        setMinimalistPrTracking(false);
                         setShowSettings(false);
                         setShowWizard(true); // Show wizard after reset
                     }
@@ -3638,6 +3731,9 @@
                                         }
                                         if (config.advancedPrTracking !== undefined) {
                                             setAdvancedPrTracking(config.advancedPrTracking);
+                                        }
+                                        if (config.minimalistPrTracking !== undefined) {
+                                            setMinimalistPrTracking(config.minimalistPrTracking);
                                         }
                                     }
                                 }
@@ -3743,6 +3839,7 @@
                             fieldErrors={fieldErrors}
                             prTracking={prTracking}
                             advancedPrTracking={advancedPrTracking}
+                            minimalistPrTracking={minimalistPrTracking}
                             workoutHistory={workoutHistory}
                         />}
                         {currentView === 'weekly' && <WeeklyView
@@ -4170,7 +4267,12 @@
 
         function EditWorkoutModal({ workout, onClose, onSave, exercisesByDay }) {
             const [editedExercises, setEditedExercises] = useState(workout.exercises);
-            const allExercises = exercisesByDay[workout.day] || [];
+            // Fall back to the workout's own exercises for legacy days whose config has
+            // been removed (e.g. Jessi's old Day 3 after the AP migration).
+            const configExercises = exercisesByDay[workout.day];
+            const allExercises = (configExercises && configExercises.length > 0)
+                ? configExercises
+                : (workout.exercises || []);
 
             const handleExerciseChange = (exerciseId, field, value) => {
                 setEditedExercises(prev => {
@@ -4590,7 +4692,7 @@
             );
         }
 
-        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors, prTracking, advancedPrTracking, workoutHistory }) {
+        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors, prTracking, advancedPrTracking, minimalistPrTracking, workoutHistory }) {
             const exercises = getCurrentExercises();
             const todayDay = getTodayDay();
 
@@ -4663,6 +4765,81 @@
                 }
 
                 return null;
+            };
+
+            // ── Minimalist PR tracking helpers ────────────────────────────────────────
+            // Mirrors the personal-app's simple mode: auto-increment when the last
+            // session hit maxReps, plus a 3-session stagnation gold flag. No downweight.
+
+            const getMinimalistPR = (exerciseId) => {
+                if (!workoutHistory || workoutHistory.length === 0) return null;
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const previousWorkout = workoutHistory
+                    .filter(w => {
+                        const workoutDate = new Date(w.date);
+                        workoutDate.setHours(0, 0, 0, 0);
+                        if (w.day !== currentDay) return false;
+                        if (workoutDate > today) return false;
+                        if (workoutDate.getTime() === today.getTime() && !w.submitted) return false;
+                        const exercise = w.exercises.find(e => e.id === exerciseId);
+                        if (!exercise) return false;
+                        if (!exercise.reps || !exercise.weight) return false;
+                        if (exercise.reps === 'NA' || exercise.weight === 'NA') return false;
+                        return true;
+                    })
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
+                if (!previousWorkout) return null;
+
+                const previousExercise = previousWorkout.exercises.find(e => e.id === exerciseId);
+                if (!previousExercise || !previousExercise.reps || !previousExercise.weight) return null;
+                if (!previousExercise.maxReps) return null;
+
+                const previousReps = parseInt(previousExercise.reps);
+                if (previousReps < previousExercise.maxReps) return null;
+
+                const lastWeight = parseFloat(previousExercise.weight);
+                const increment = getPRWeightIncrement(previousExercise.name);
+                return {
+                    weight: (lastWeight + increment).toString(),
+                    lastWeight: previousExercise.weight,
+                    lastReps: previousExercise.reps,
+                    increment
+                };
+            };
+
+            const getMinimalistStagnation = (exerciseId) => {
+                if (!workoutHistory || workoutHistory.length < 3) return null;
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const recent = workoutHistory
+                    .filter(w => {
+                        const workoutDate = new Date(w.date);
+                        workoutDate.setHours(0, 0, 0, 0);
+                        if (w.day !== currentDay) return false;
+                        if (workoutDate > today) return false;
+                        if (workoutDate.getTime() === today.getTime() && !w.submitted) return false;
+                        if (!w.submitted) return false;
+                        const exercise = w.exercises.find(e => e.id === exerciseId);
+                        if (!exercise) return false;
+                        if (!exercise.reps || !exercise.weight) return false;
+                        if (exercise.reps === 'NA' || exercise.weight === 'NA') return false;
+                        return true;
+                    })
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .slice(0, 3);
+
+                if (recent.length < 3) return null;
+
+                const exercises = recent.map(w => w.exercises.find(e => e.id === exerciseId));
+                const first = exercises[0];
+                const allSame = exercises.every(e => e.weight === first.weight && e.reps === first.reps);
+                return allSame ? { weight: first.weight, reps: first.reps } : null;
             };
 
             // ── Advanced PR tracking helpers ──────────────────────────────────────────
@@ -4844,6 +5021,11 @@
                 const isStandardOrBw = exercise.type === 'standard' || exercise.type === 'bodyweight'
                     || (!exercise.type && !exercise.isCardio && exercise.typeId !== 'cardio');
                 const showAdvancedPR = advancedPrTracking && !isLogged && isStandardOrBw;
+
+                // Minimalist PR tracking (Jessi, and anyone else opted in via minimalistPrTracking)
+                const showMinimalistPR = minimalistPrTracking && !isLogged && isStandardOrBw;
+                const minimalistPR = showMinimalistPR ? getMinimalistPR(exercise.id) : null;
+                const minimalistStagnation = showMinimalistPR && !minimalistPR ? getMinimalistStagnation(exercise.id) : null;
                 const showPlateauBuster = showAdvancedPR ? isPlateauBuster(exercise.id) : false;
                 const advPrWeightRecovery = showAdvancedPR ? getPRWeightRecovery(exercise.id) : null;
                 const advFailedRetry = showAdvancedPR && !advPrWeightRecovery
@@ -5177,6 +5359,9 @@
                             || advAutoRegulation?.weight || advPlateauDecrement?.weight
                             || previous?.weight || '';
                     }
+                    if (minimalistPrTracking && minimalistPR) {
+                        return minimalistPR.weight;
+                    }
                     return previous?.weight || '';
                 })();
 
@@ -5189,6 +5374,11 @@
                         if (showPlateauBuster && previous?.reps) return String(parseInt(previous.reps));
                         if (previous?.reps) return String(parseInt(previous.reps) + 1);
                         return '';
+                    }
+                    if (minimalistPrTracking && previous?.reps) {
+                        return parseInt(previous.reps) >= (exercise.maxReps || Infinity)
+                            ? (exercise.minReps || 0).toString()
+                            : Math.max(parseInt(previous.reps) + 1, exercise.minReps || 0).toString();
                     }
                     if (prTracking && previous?.reps) {
                         return parseInt(previous.reps) >= (exercise.maxReps || Infinity)
@@ -5203,6 +5393,7 @@
                         if (advPrWeightRecovery || advAutoRegulation) return '2px solid #4CAF50';
                         if (showPlateauBuster || advFailedRetry) return '2px solid #ff9500';
                     }
+                    if (minimalistPrTracking && minimalistPR) return '2px solid #4CAF50';
                     if (prRecommendation) return `2px solid ${prRecommendation.borderColor}`;
                     return undefined;
                 })();
@@ -5240,6 +5431,12 @@
                                     Plateau Buster - Hit 1 Set of {advFailedRetry.targetReps} Reps
                                 </div>
                             ) : null
+                        ) : minimalistPrTracking ? (
+                            minimalistStagnation ? (
+                                <div style={{ color: '#d4af37', padding: '8px 12px', borderRadius: '6px', marginBottom: '12px', fontWeight: '600', fontSize: '14px', textAlign: 'center' }}>
+                                    2 Sets Recommended
+                                </div>
+                            ) : null
                         ) : prRecommendation ? (
                             <div style={{ color: prRecommendation.textColor, padding: '8px 12px', borderRadius: '6px', marginBottom: '12px', fontWeight: '600', fontSize: '12px', textAlign: 'center' }}>
                                 {prRecommendation.message}
@@ -5258,6 +5455,11 @@
                         {advancedPrTracking && advPlateauDecrement && !advPrWeightRecovery && !advAutoRegulation && !advFailedRetry && (
                             <div style={{ color: '#ff9500', fontSize: '12px', fontWeight: '600', marginBottom: '8px', marginTop: '4px' }}>
                                 -{advPlateauDecrement.increment}lbs
+                            </div>
+                        )}
+                        {minimalistPrTracking && minimalistPR && (
+                            <div style={{ color: '#4CAF50', fontSize: '12px', fontWeight: '600', marginBottom: '8px', marginTop: '4px' }}>
+                                +{minimalistPR.increment}lbs
                             </div>
                         )}
                         <div className="input-row">
@@ -5388,8 +5590,12 @@
                                     minute: '2-digit'
                                 });
 
-                                // Get all exercises for this day
-                                const allExercises = exercisesByDay[workout.day] || [];
+                                // Get all exercises for this day.
+                                // Fall back to the workout's own exercises for legacy days
+                                // (e.g. Jessi's old Legs/Day 3 after the AP migration).
+                                const allExercises = (exercisesByDay[workout.day] && exercisesByDay[workout.day].length > 0)
+                                    ? exercisesByDay[workout.day]
+                                    : (workout.exercises || []);
                                 const completedIds = new Set(workout.exercises.map(e => e.id));
 
                                 // Calculate sequential day number (total workouts completed)
