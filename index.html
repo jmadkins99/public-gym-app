@@ -1179,38 +1179,38 @@
                 },
 
                 'jessi': {
-                    name: 'Anterior - Posterior',
+                    name: 'Torso - Limbs',
                     minimalistPrTracking: true,
                     bypassSchedule: true,
                     workoutDays: {
 
                         1: {
-                            name: 'Anterior',
+                            name: 'Torso',
                             exercises: [
-                                { name: 'Tricep Pushdown', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Cable Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Overhead Tricep Extension', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Flat Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Incline Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Seated Row Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Overhead Tricep Extension', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Upper Back Row Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Shoulder Press Machine', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Ab Crunch Machine', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Pendulum Squats', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Leg Extensions', sets: 1, minReps: 6, maxReps: 8 },
                             ]
                         },
 
                         2: {
-                            name: 'Posterior',
+                            name: 'Limbs',
                             exercises: [
                                 { name: 'Preacher Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Upper Back Row Machine', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Seated Row Machine', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Tricep Pushdown', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Cable Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Stiff Legged Deadlifts', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Ab Crunch Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Leg Extensions', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Stiff Legged Deadlifts', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Pendulum Squats', sets: 1, minReps: 6, maxReps: 8 },
                             ]
                         }
 
@@ -1394,38 +1394,10 @@
             });
         }
 
-        // Advanced PR tracking: weight increment amounts per exercise name (lowercase).
-        // Used by advancedPrTracking to auto-regulate weight up/down each session.
-        // Add entries here to customize per-exercise increments; falls back to 2.5 lbs.
-        const PR_WEIGHT_INCREMENTS = {
-            'bench press': 2.5,
-            'barbell row': 2.5,
-            'squat': 2.5,
-            'romanian deadlift': 2.5,
-            'overhead press': 2.5,
-            'deadlift': 2.5,
-            'leg press': 2.5,
-            'pendulum squat': 2.5,
-            'hip thrusts': 2.5,
-            'lat pulldown': 1.25,
-            'wide grip lat pulldowns': 1.25,
-            'cable bicep curl': 1.25,
-            'tricep rope pushdown': 1.25,
-            'tricep pushdowns': 1.25,
-            'dumbbell lateral raise': 1.25,
-            'preacher curls': 1.25,
-            'leg curl': 1.25,
-            'seated leg curls': 1.25,
-            'leg extension': 1.25,
-            'leg extensions': 1.25,
-            'calf raise': 1.25,
-            'calf raise machine': 1.25,
-            'flat chest press machine': 1.25,
-            'shoulder press machine': 1.25,
-            'upper back row machine': 1.25,
-            'neutral grip row machine': 1.25,
-            'hip adduction machine': 1.25,
-        };
+        // PR tracking: weight increment per exercise name (lowercase). Empty dict means
+        // every exercise uses the 2.5 fallback in getPRWeightIncrement below. Add entries
+        // here to override per-exercise.
+        const PR_WEIGHT_INCREMENTS = {};
 
         const getPRWeightIncrement = (exerciseName) => {
             const key = (exerciseName || '').toLowerCase().trim();
@@ -2814,6 +2786,68 @@
             storage.setItem('jessiAPMigrationApplied', 'true');
         }
 
+        // Detect Jessi's legacy Anterior/Posterior exerciseConfig and reclassify each
+        // exercise into the new Torso/Limbs split by name pattern. Preserves UUIDs +
+        // custom names. Runs at most once (gated by the jessiTLMigrationApplied flag).
+        function migrateJessiToTorsoLimbs() {
+            if (storage.getItem('jessiTLMigrationApplied') === 'true') return;
+
+            const raw = storage.getItem('gymExerciseConfig');
+            if (!raw) return;
+            let config;
+            try { config = JSON.parse(raw); } catch (e) { return; }
+
+            if (config.version !== 2 || !config.days) return;
+            const cats = (config.categories || []).map(c => String(c).toLowerCase());
+            const isAP = cats.length === 2 && cats.includes('anterior') && cats.includes('posterior');
+            if (!isAP) return;
+
+            const day1 = (config.days[1] || []).slice();
+            const day2 = (config.days[2] || []).slice();
+
+            // Classify by name keyword. Torso checked first so "Overhead Tricep
+            // Extension" (Jessi's stale name for Weighted Dips) lands on Torso
+            // rather than being miscaught by a generic tricep rule.
+            const classify = (name) => {
+                const n = String(name || '').toLowerCase();
+                if (/chest|seated row|upper back row|frontal plane|pulldown|kelso|shrug|shoulder press|overhead tricep|weighted dip/.test(n)) {
+                    return 'Torso';
+                }
+                if (/preacher|tricep pushdown|lateral raise|wrist curl|ab crunch|leg extension|hip adduction|deadlift|stiff legged|pendulum|squat|calf/.test(n)) {
+                    return 'Limbs';
+                }
+                return null;
+            };
+
+            const torso = [];
+            const limbs = [];
+
+            [...day1, ...day2].forEach(ex => {
+                const target = classify(ex.name);
+                if (target === 'Torso') {
+                    torso.push({ ...ex, category: 'Torso' });
+                } else {
+                    // Unknown / unmatched names fall through to Limbs.
+                    limbs.push({ ...ex, category: 'Limbs' });
+                }
+            });
+
+            const reindex = (arr) => arr.map((ex, idx) => ({ ...ex, order: idx }));
+
+            const newConfig = {
+                ...config,
+                version: 2,
+                days: {
+                    1: reindex(torso),
+                    2: reindex(limbs)
+                },
+                categories: ['Torso', 'Limbs']
+            };
+
+            storage.setItem('gymExerciseConfig', JSON.stringify(newConfig));
+            storage.setItem('jessiTLMigrationApplied', 'true');
+        }
+
         function createDefaultSchedule() {
             // Create a 2-day alternating schedule to preserve old behavior
             const defaultSchedule = {
@@ -2868,6 +2902,9 @@
 
                 // One-shot Anterior/Posterior migration for Jessi's PPL data
                 migrateJessiToAnteriorPosterior();
+
+                // One-shot Torso/Limbs migration for Jessi's Anterior/Posterior data
+                migrateJessiToTorsoLimbs();
 
                 // Check if setup is completed
                 const setupCompleted = storage.getItem('gymSetupCompleted');
@@ -3163,17 +3200,16 @@
             const getPreviousWorkout = (exerciseId) => {
                 if (workoutHistory.length === 0) return null;
 
-                // Collect the last 3 sessions that included this exercise (regardless of NA status)
+                // Collect all sessions that included this exercise (regardless of NA status)
                 const lastThreeSessions = [];
                 for (let workout of workoutHistory) {
                     const exercise = workout.exercises.find(e => e.id === exerciseId);
                     if (exercise) {
                         lastThreeSessions.push(exercise);
-                        if (lastThreeSessions.length >= 3) break;
                     }
                 }
 
-                // From those 3, find the most recent one with actual data (non-NA)
+                // From those, find the most recent one with actual data (non-NA)
                 for (let exercise of lastThreeSessions) {
                     let hasData = false;
                     if (exercise.type === 'assault-bike') {
