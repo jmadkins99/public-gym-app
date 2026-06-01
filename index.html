@@ -1195,6 +1195,7 @@
                                 { name: 'Upper Back Row Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Shoulder Press Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Ab Crunch Machine', sets: 1, minReps: 6, maxReps: 8 },
                             ]
                         },
 
@@ -1206,7 +1207,6 @@
                                 { name: 'Cable Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Ab Crunch Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Leg Extensions', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Stiff Legged Deadlifts', sets: 1, minReps: 6, maxReps: 8 },
@@ -2788,12 +2788,13 @@
 
         // Reclassify Jessi's exerciseConfig into the Torso/Limbs split by name pattern,
         // and impose the canonical exercise order to mirror the personal-app program.
-        // Handles both Anterior/Posterior configs (full reclassification) and existing
-        // Torso/Limbs configs from the prior migration revision (resort only). Preserves
-        // UUIDs + custom names. Gated by jessiTLMigrationApplied2 so it re-runs for
-        // anyone who hit the earlier revision.
+        // Reclassifies on every run so subsequent revisions (e.g. moving ab-crunch from
+        // Limbs to Torso) take effect without manual reset. Handles either Anterior/
+        // Posterior or Torso/Limbs as the starting state. Preserves UUIDs + custom
+        // names. Gated by jessiTLMigrationApplied3 so it re-runs for anyone who hit
+        // an earlier revision.
         function migrateJessiToTorsoLimbs() {
-            if (storage.getItem('jessiTLMigrationApplied2') === 'true') return;
+            if (storage.getItem('jessiTLMigrationApplied3') === 'true') return;
 
             const raw = storage.getItem('gymExerciseConfig');
             if (!raw) return;
@@ -2814,10 +2815,10 @@
             // rather than being miscaught by a generic tricep rule.
             const classify = (name) => {
                 const n = String(name || '').toLowerCase();
-                if (/chest|seated row|upper back row|frontal plane|pulldown|kelso|shrug|shoulder press|overhead tricep|weighted dip/.test(n)) {
+                if (/chest|seated row|upper back row|frontal plane|pulldown|kelso|shrug|shoulder press|overhead tricep|weighted dip|ab crunch|crunch/.test(n)) {
                     return 'Torso';
                 }
-                if (/preacher|tricep pushdown|lateral raise|wrist curl|ab crunch|leg extension|hip adduction|deadlift|stiff legged|pendulum|squat|calf/.test(n)) {
+                if (/preacher|tricep pushdown|lateral raise|wrist curl|leg extension|hip adduction|deadlift|stiff legged|pendulum|squat|calf/.test(n)) {
                     return 'Limbs';
                 }
                 return null;
@@ -2838,6 +2839,7 @@
                     if (/upper back row/.test(n)) return 5;
                     if (/kelso|shrug/.test(n)) return 6;
                     if (/shoulder press/.test(n)) return 7;
+                    if (/ab crunch|crunch/.test(n)) return 8;
                     return 999;
                 }
                 if (/preacher/.test(n)) return 0;
@@ -2845,34 +2847,27 @@
                 if (/lateral/.test(n)) return 2;
                 if (/reverse.*wrist|reverse wrist/.test(n)) return 3;
                 if (/wrist curl/.test(n)) return 4;
-                if (/ab crunch|crunch/.test(n)) return 5;
-                if (/calf/.test(n)) return 6;
-                if (/hip adduction|leg extension/.test(n)) return 7;
-                if (/stiff legged|deadlift/.test(n)) return 8;
-                if (/pendulum|squat/.test(n)) return 9;
+                if (/calf/.test(n)) return 5;
+                if (/hip adduction|leg extension/.test(n)) return 6;
+                if (/stiff legged|deadlift/.test(n)) return 7;
+                if (/pendulum|squat/.test(n)) return 8;
                 return 999;
             };
 
             const torso = [];
             const limbs = [];
 
-            if (isTL) {
-                // Already on Torso/Limbs (prior migration revision) — trust the
-                // existing day assignment, just resort below.
-                day1.forEach(ex => torso.push({ ...ex, category: 'Torso' }));
-                day2.forEach(ex => limbs.push({ ...ex, category: 'Limbs' }));
-            } else {
-                // Anterior/Posterior — classify each exercise by name.
-                [...day1, ...day2].forEach(ex => {
-                    const target = classify(ex.name);
-                    if (target === 'Torso') {
-                        torso.push({ ...ex, category: 'Torso' });
-                    } else {
-                        // Unknown / unmatched names fall through to Limbs.
-                        limbs.push({ ...ex, category: 'Limbs' });
-                    }
-                });
-            }
+            // Always reclassify by name (whether starting from AP or TL) so day
+            // reassignments from later revisions take effect.
+            [...day1, ...day2].forEach(ex => {
+                const target = classify(ex.name);
+                if (target === 'Torso') {
+                    torso.push({ ...ex, category: 'Torso' });
+                } else {
+                    // Unknown / unmatched names fall through to Limbs.
+                    limbs.push({ ...ex, category: 'Limbs' });
+                }
+            });
 
             torso.sort((a, b) => getDesiredOrder('Torso', a.name) - getDesiredOrder('Torso', b.name));
             limbs.sort((a, b) => getDesiredOrder('Limbs', a.name) - getDesiredOrder('Limbs', b.name));
@@ -2890,7 +2885,7 @@
             };
 
             storage.setItem('gymExerciseConfig', JSON.stringify(newConfig));
-            storage.setItem('jessiTLMigrationApplied2', 'true');
+            storage.setItem('jessiTLMigrationApplied3', 'true');
         }
 
         function createDefaultSchedule() {
