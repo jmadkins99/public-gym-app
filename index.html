@@ -2791,10 +2791,10 @@
         // Reclassifies on every run so subsequent revisions (e.g. moving ab-crunch from
         // Limbs to Torso) take effect without manual reset. Handles either Anterior/
         // Posterior or Torso/Limbs as the starting state. Preserves UUIDs + custom
-        // names. Gated by jessiTLMigrationApplied3 so it re-runs for anyone who hit
+        // names. Gated by jessiTLMigrationApplied4 so it re-runs for anyone who hit
         // an earlier revision.
         function migrateJessiToTorsoLimbs() {
-            if (storage.getItem('jessiTLMigrationApplied3') === 'true') return;
+            if (storage.getItem('jessiTLMigrationApplied4') === 'true') return;
 
             const raw = storage.getItem('gymExerciseConfig');
             if (!raw) return;
@@ -2815,10 +2815,10 @@
             // rather than being miscaught by a generic tricep rule.
             const classify = (name) => {
                 const n = String(name || '').toLowerCase();
-                if (/chest|seated row|upper back row|frontal plane|pulldown|kelso|shrug|shoulder press|overhead tricep|weighted dip|ab crunch|crunch/.test(n)) {
+                if (/chest|seated row|upper back row|frontal plane|pulldown|kelso|shrug|shoulder press|overhead tricep|weighted dip|lateral raise/.test(n)) {
                     return 'Torso';
                 }
-                if (/preacher|tricep pushdown|lateral raise|wrist curl|leg extension|hip adduction|deadlift|stiff legged|pendulum|squat|calf/.test(n)) {
+                if (/preacher|tricep pushdown|wrist curl|leg extension|hip adduction|deadlift|stiff legged|pendulum|squat|calf|ab crunch|crunch/.test(n)) {
                     return 'Limbs';
                 }
                 return null;
@@ -2835,18 +2835,18 @@
                     if (/chest fl|chest press|flat chest/.test(n)) return 0;
                     if (/seated row|hammer row/.test(n)) return 2;
                     if (/weighted dip|overhead tricep/.test(n)) return 3;
-                    if (/frontal/.test(n)) return 4;
-                    if (/upper back row/.test(n)) return 5;
-                    if (/kelso|shrug/.test(n)) return 6;
-                    if (/shoulder press/.test(n)) return 7;
-                    if (/ab crunch|crunch/.test(n)) return 8;
+                    if (/lateral/.test(n)) return 4;
+                    if (/frontal/.test(n)) return 5;
+                    if (/upper back row/.test(n)) return 6;
+                    if (/kelso|shrug/.test(n)) return 7;
+                    if (/shoulder press/.test(n)) return 8;
                     return 999;
                 }
                 if (/preacher/.test(n)) return 0;
                 if (/tricep pushdown|pushdown/.test(n)) return 1;
-                if (/lateral/.test(n)) return 2;
-                if (/reverse.*wrist|reverse wrist/.test(n)) return 3;
-                if (/wrist curl/.test(n)) return 4;
+                if (/reverse.*wrist|reverse wrist/.test(n)) return 2;
+                if (/wrist curl/.test(n)) return 3;
+                if (/ab crunch|crunch/.test(n)) return 4;
                 if (/calf/.test(n)) return 5;
                 if (/hip adduction|leg extension/.test(n)) return 6;
                 if (/stiff legged|deadlift/.test(n)) return 7;
@@ -2885,7 +2885,7 @@
             };
 
             storage.setItem('gymExerciseConfig', JSON.stringify(newConfig));
-            storage.setItem('jessiTLMigrationApplied3', 'true');
+            storage.setItem('jessiTLMigrationApplied4', 'true');
         }
 
         function createDefaultSchedule() {
@@ -3542,7 +3542,6 @@
                     const findPreviousValidExercise = (exerciseId) => {
                         const previousWorkouts = workoutHistory
                             .filter(w => {
-                                if (w.day !== currentDay) return false;
                                 if (w.date === todayWorkout.date) return false;
                                 if (!w.submitted) return false;
                                 return true;
@@ -3580,7 +3579,6 @@
                                 // Don't chain plateau busters — skip if previous session already had one
                                 const prevWorkoutWithPlateau = workoutHistory
                                     .filter(w => {
-                                        if (w.day !== currentDay) return false;
                                         if (w.date === todayWorkout.date) return false;
                                         if (!w.submitted) return false;
                                         const ex = w.exercises.find(e => e.id === exercise.id);
@@ -4796,7 +4794,6 @@
                     .filter(w => {
                         const workoutDate = new Date(w.date);
                         workoutDate.setHours(0, 0, 0, 0);
-                        if (w.day !== currentDay) return false;
                         // Exclude future workouts
                         if (workoutDate > today) return false;
                         // Exclude today's unsubmitted workout
@@ -4857,7 +4854,6 @@
                     .filter(w => {
                         const workoutDate = new Date(w.date);
                         workoutDate.setHours(0, 0, 0, 0);
-                        if (w.day !== currentDay) return false;
                         if (workoutDate > today) return false;
                         if (workoutDate.getTime() === today.getTime() && !w.submitted) return false;
                         const exercise = w.exercises.find(e => e.id === exerciseId);
@@ -4897,7 +4893,6 @@
                     .filter(w => {
                         const workoutDate = new Date(w.date);
                         workoutDate.setHours(0, 0, 0, 0);
-                        if (w.day !== currentDay) return false;
                         if (workoutDate > today) return false;
                         if (workoutDate.getTime() === today.getTime() && !w.submitted) return false;
                         if (!w.submitted) return false;
@@ -4935,7 +4930,6 @@
                 const previousWorkout = workoutHistory
                     .filter(w => {
                         const d = new Date(w.date); d.setHours(0, 0, 0, 0);
-                        if (w.day !== currentDay) return false;
                         if (d > today) return false;
                         if (d.getTime() === today.getTime() && !w.submitted) return false;
                         const ex = w.exercises.find(e => e.id === exerciseId);
@@ -4955,7 +4949,6 @@
                 const previousWorkouts = workoutHistory
                     .filter(w => {
                         const d = new Date(w.date); d.setHours(0, 0, 0, 0);
-                        if (w.day !== currentDay) return false;
                         if (d > today) return false;
                         if (d.getTime() === today.getTime() && !w.submitted) return false;
                         const ex = w.exercises.find(e => e.id === exerciseId);
@@ -4988,7 +4981,6 @@
                 const previousWorkouts = workoutHistory
                     .filter(w => {
                         const d = new Date(w.date); d.setHours(0, 0, 0, 0);
-                        if (w.day !== currentDay) return false;
                         if (d > today) return false;
                         if (d.getTime() === today.getTime() && !w.submitted) return false;
                         const ex = w.exercises.find(e => e.id === exerciseId);
@@ -5023,7 +5015,6 @@
                 const previousWorkout = workoutHistory
                     .filter(w => {
                         const d = new Date(w.date); d.setHours(0, 0, 0, 0);
-                        if (w.day !== currentDay) return false;
                         if (d > today) return false;
                         if (d.getTime() === today.getTime() && !w.submitted) return false;
                         const ex = w.exercises.find(e => e.id === exerciseId);
@@ -5055,7 +5046,6 @@
                 const previousWorkout = workoutHistory
                     .filter(w => {
                         const d = new Date(w.date); d.setHours(0, 0, 0, 0);
-                        if (w.day !== currentDay) return false;
                         if (d > today) return false;
                         if (d.getTime() === today.getTime() && !w.submitted) return false;
                         const ex = w.exercises.find(e => e.id === exerciseId);

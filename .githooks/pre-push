@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Pre-push hook for public_gym_app: runs the gym_app integration test
+# suite (which covers BOTH apps) before allowing a push.
+# Blocks the push on any test failure.
+#
+# Bypass in emergencies with: git push --no-verify
+#
+# To enable this hook after cloning:
+#   git config core.hooksPath .githooks
+#
+# Assumes ../gym_app/tests/ exists (the test suite lives there and tests
+# both apps). If the sibling repo isn't checked out, the hook skips
+# instead of failing — that's the right call for someone who only has
+# public_gym_app cloned.
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+SIBLING_TESTS_DIR="$REPO_ROOT/../gym_app/tests"
+
+if [ ! -d "$SIBLING_TESTS_DIR" ]; then
+    echo "pre-push: sibling gym_app/tests/ not found — skipping"
+    exit 0
+fi
+
+echo "pre-push: running ../gym_app/tests/run.sh ..."
+echo
+if bash "$SIBLING_TESTS_DIR/run.sh"; then
+    echo
+    echo "pre-push: all tests passed, allowing push."
+    exit 0
+else
+    echo
+    echo "pre-push: tests FAILED. Push aborted."
+    echo "  Fix the failure, or bypass with: git push --no-verify"
+    exit 1
+fi
