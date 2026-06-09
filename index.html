@@ -2791,10 +2791,10 @@
         // Reclassifies on every run so subsequent revisions (e.g. moving ab-crunch from
         // Limbs to Torso) take effect without manual reset. Handles either Anterior/
         // Posterior or Torso/Limbs as the starting state. Preserves UUIDs + custom
-        // names. Gated by jessiTLMigrationApplied4 so it re-runs for anyone who hit
+        // names. Gated by jessiTLMigrationApplied5 so it re-runs for anyone who hit
         // an earlier revision.
         function migrateJessiToTorsoLimbs() {
-            if (storage.getItem('jessiTLMigrationApplied4') === 'true') return;
+            if (storage.getItem('jessiTLMigrationApplied5') === 'true') return;
 
             const raw = storage.getItem('gymExerciseConfig');
             if (!raw) return;
@@ -2812,10 +2812,12 @@
 
             // Classify by name keyword. Torso checked first so "Overhead Tricep
             // Extension" (Jessi's stale name for Weighted Dips) lands on Torso
-            // rather than being miscaught by a generic tricep rule.
+            // rather than being miscaught by a generic tricep rule. `dip` and
+            // `transverse` cover Jessi's older display names ("Dips",
+            // "Transverse Plane Rows") that older revisions missed.
             const classify = (name) => {
                 const n = String(name || '').toLowerCase();
-                if (/chest|seated row|upper back row|frontal plane|pulldown|kelso|shrug|shoulder press|overhead tricep|weighted dip|lateral raise/.test(n)) {
+                if (/chest|seated row|upper back row|hammer row|transverse|frontal plane|pulldown|kelso|shrug|shoulder press|overhead tricep|weighted dip|\bdip|lateral raise/.test(n)) {
                     return 'Torso';
                 }
                 if (/preacher|tricep pushdown|wrist curl|leg extension|hip adduction|deadlift|stiff legged|pendulum|squat|calf|ab crunch|crunch/.test(n)) {
@@ -2833,11 +2835,11 @@
                 if (category === 'Torso') {
                     if (/incline/.test(n)) return 1;
                     if (/chest fl|chest press|flat chest/.test(n)) return 0;
-                    if (/seated row|hammer row/.test(n)) return 2;
-                    if (/weighted dip|overhead tricep/.test(n)) return 3;
+                    if (/seated row|hammer row|sagittal/.test(n)) return 2;
+                    if (/weighted dip|overhead tricep|\bdip/.test(n)) return 3;
                     if (/lateral/.test(n)) return 4;
                     if (/frontal/.test(n)) return 5;
-                    if (/upper back row/.test(n)) return 6;
+                    if (/upper back row|transverse/.test(n)) return 6;
                     if (/kelso|shrug/.test(n)) return 7;
                     if (/shoulder press/.test(n)) return 8;
                     return 999;
@@ -2885,7 +2887,7 @@
             };
 
             storage.setItem('gymExerciseConfig', JSON.stringify(newConfig));
-            storage.setItem('jessiTLMigrationApplied4', 'true');
+            storage.setItem('jessiTLMigrationApplied5', 'true');
         }
 
         function createDefaultSchedule() {
