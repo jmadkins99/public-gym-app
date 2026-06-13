@@ -2890,6 +2890,149 @@
             storage.setItem('jessiTLMigrationApplied5', 'true');
         }
 
+        // One-shot: auto-enable gympinMode for Jessi's installs without requiring
+        // ?gympin=on. We identify "Jessi-shaped" by the same signal the TL
+        // migration uses: an exerciseConfig whose categories are Anterior/
+        // Posterior or Torso/Limbs (no other user picks those in the wizard).
+        // Gated by its own flag so it's independent of TL migration bumps.
+        function enableGympinForJessi() {
+            if (storage.getItem('jessiGympinEnabled') === 'true') return;
+
+            const raw = storage.getItem('gymExerciseConfig');
+            if (!raw) return;
+            let config;
+            try { config = JSON.parse(raw); } catch (e) { return; }
+
+            if (config.version !== 2 || !config.days) return;
+            const cats = (config.categories || []).map(c => String(c).toLowerCase());
+            const isAP = cats.length === 2 && cats.includes('anterior') && cats.includes('posterior');
+            const isTL = cats.length === 2 && cats.includes('torso') && cats.includes('limbs');
+            if (!isAP && !isTL) return;
+
+            config.gympinMode = true;
+            storage.setItem('gymExerciseConfig', JSON.stringify(config));
+            storage.setItem('jessiGympinEnabled', 'true');
+        }
+
+        // ============================================================================
+        // GYMPIN: Weight Breakdown
+        // ============================================================================
+        // Opt-in feature for coached users (currently just Jessi). Enabled via the
+        // `gympinMode` field on exerciseConfig. Set it once on the user's device
+        // by visiting the app with `?gympin=on` (or `?gympin=off` to disable);
+        // the App component picks the param up on mount, flips the flag, and
+        // strips the param from the URL. The flag travels with the user's
+        // exerciseConfig backup so it survives restore.
+
+        // Classify a Jessi-style exercise display name into a weight-breakdown
+        // config. Mirrors gym_app/js/config.js: pin-stack machines (with optional
+        // overflow above a cap) and plate-loaded machines (one- or two-sided).
+        // Unknown names return null and don't get a breakdown button.
+        function getWeightBreakdownConfig(name) {
+            const n = String(name || '').toLowerCase();
+
+            // Plate-loaded — check before pin-stack so e.g. "Incline Chest Press"
+            // beats a generic "chest" rule. one-sided = plates hang on one arm,
+            // total = perSide; two-sided = plates on both arms, total = 2 * perSide.
+            if (/incline/.test(n))               return { type: 'plate-loaded', plateMode: 'two-sided' };
+            if (/preacher/.test(n))              return { type: 'plate-loaded', plateMode: 'one-sided' };
+            if (/stiff legged|deadlift/.test(n)) return { type: 'plate-loaded', plateMode: 'two-sided' };
+            if (/pendulum|squat/.test(n))        return { type: 'plate-loaded', plateMode: 'one-sided' };
+            if (/hammer row/.test(n))            return { type: 'plate-loaded', plateMode: 'one-sided' };
+            if (/\bdip|weighted dip|overhead tricep/.test(n))
+                                                 return { type: 'plate-loaded', plateMode: 'one-sided' };
+
+            // Pin-stack with overflow cap — cable wrist curls maxes at 97.5 then
+            // accepts hanging plates one-sided.
+            if (/cable wrist curl/.test(n))
+                return { type: 'pin-stack', maxPin: 97.5, overflowPlateMode: 'one-sided' };
+
+            // Plain pin-stack — any other Jessi-program movement that uses a stack.
+            if (/chest fl/.test(n))                                return { type: 'pin-stack' };
+            if (/sagittal|frontal plane|pulldown/.test(n))         return { type: 'pin-stack' };
+            if (/transverse|upper back row|seated row/.test(n))    return { type: 'pin-stack' };
+            if (/lateral raise/.test(n))                           return { type: 'pin-stack' };
+            if (/kelso|shrug/.test(n))                             return { type: 'pin-stack' };
+            if (/shoulder press/.test(n))                          return { type: 'pin-stack' };
+            if (/tricep pushdown|pushdown/.test(n))                return { type: 'pin-stack' };
+            if (/reverse.*wrist|wrist curl/.test(n))               return { type: 'pin-stack' };
+            if (/ab crunch|crunch/.test(n))                        return { type: 'pin-stack' };
+            if (/calf/.test(n))                                    return { type: 'pin-stack' };
+            if (/leg extension|hip adduction/.test(n))             return { type: 'pin-stack' };
+
+            return null;
+        }
+
+        // Break `weight` into the largest combination of standard plates that
+        // doesn't exceed it. Used for both plate-loaded sets and the overflow
+        // portion of pin-stack-with-cap. Returns { 45: count, 25: count, ... }.
+        function gympinBreakdownPlatesFloor(weight) {
+            const available = [45, 25, 10, 5, 2.5, 1.25];
+            const plates = {};
+            let remaining = weight;
+            for (const p of available) {
+                const count = Math.floor(remaining / p);
+                if (count > 0) {
+                    plates[p] = count;
+                    remaining = parseFloat((remaining - count * p).toFixed(2));
+                }
+            }
+            return plates;
+        }
+
+        // Plate-loaded breakdown — mirrors gym_app's calculatePlateBreakdown.
+        function gympinCalculatePlateBreakdown(totalWeight, config) {
+            const isTwoSided = config.plateMode === 'two-sided';
+            const perSide = (w) => isTwoSided ? w / 2 : w;
+            const buildSet = (target) => ({
+                totalWeight: target,
+                perSideWeight: perSide(target),
+                plates: gympinBreakdownPlatesFloor(perSide(target)),
+            });
+            return {
+                isTwoSided,
+                warmup1: buildSet(totalWeight * 0.7),
+                warmup2: buildSet(totalWeight * 0.9),
+                topSet:  buildSet(totalWeight),
+            };
+        }
+
+        // Pin-stack breakdown — mirrors gym_app's calculatePinStackBreakdown.
+        // For pin-stack-with-cap exercises, sets above maxPin show "pin at max
+        // + plates for the excess" (plates rounded DOWN to clean combinations).
+        function gympinCalculatePinStackBreakdown(totalWeight, config) {
+            const maxPin = (config && config.maxPin) || null;
+            const roundPin = (weight) => {
+                const base = Math.floor(weight / 5) * 5;
+                const r = weight - base;
+                if (r < 0.625)      return base;
+                else if (r < 1.875) return base + 1.25;
+                else if (r < 3.125) return base + 2.5;
+                else if (r < 4.375) return base + 3.75;
+                else                return base + 5;
+            };
+            const buildSet = (target) => {
+                if (maxPin === null || target <= maxPin) {
+                    const w = roundPin(target);
+                    return { overflow: false, pinWeight: w, totalWeight: w };
+                }
+                const plates = gympinBreakdownPlatesFloor(target - maxPin);
+                const plateTotal = Object.entries(plates)
+                    .reduce((s, [p, c]) => s + parseFloat(p) * c, 0);
+                return {
+                    overflow: true,
+                    pinWeight: maxPin,
+                    plates,
+                    totalWeight: parseFloat((maxPin + plateTotal).toFixed(2)),
+                };
+            };
+            return {
+                warmup1: buildSet(totalWeight * 0.7),
+                warmup2: buildSet(totalWeight * 0.9),
+                topSet:  buildSet(totalWeight),
+            };
+        }
+
         function createDefaultSchedule() {
             // Create a 2-day alternating schedule to preserve old behavior
             const defaultSchedule = {
@@ -2924,6 +3067,8 @@
             const [prTracking, setPrTracking] = useState(false);
             const [advancedPrTracking, setAdvancedPrTracking] = useState(false);
             const [minimalistPrTracking, setMinimalistPrTracking] = useState(false);
+            const [gympinMode, setGympinMode] = useState(false);
+            const [expandedWeightBreakdown, setExpandedWeightBreakdown] = useState(null);
             const [selectedExercise, setSelectedExercise] = useState('');
             const [celebration, setCelebration] = useState(null);
             const [showSettings, setShowSettings] = useState(false);
@@ -2942,11 +3087,29 @@
                 // Migrate existing data to namespaced storage (one-time for existing users)
                 migrateToNamespacedStorage();
 
+                // ?gympin=on / ?gympin=off — coach-only toggle. Flip the flag on
+                // the persisted exerciseConfig, strip the param, then continue
+                // booting so the regular load reads the new value.
+                const params = new URLSearchParams(window.location.search);
+                const gympinParam = params.get('gympin');
+                if (gympinParam === 'on' || gympinParam === 'off') {
+                    const raw = storage.getItem('gymExerciseConfig');
+                    const cfg = raw ? (() => { try { return JSON.parse(raw); } catch (e) { return {}; } })() : {};
+                    cfg.gympinMode = (gympinParam === 'on');
+                    storage.setItem('gymExerciseConfig', JSON.stringify(cfg));
+                    params.delete('gympin');
+                    const cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+                    window.history.replaceState({}, '', cleanUrl);
+                }
+
                 // One-shot Anterior/Posterior migration for Jessi's PPL data
                 migrateJessiToAnteriorPosterior();
 
                 // One-shot Torso/Limbs migration for Jessi's Anterior/Posterior data
                 migrateJessiToTorsoLimbs();
+
+                // One-shot auto-enable of gympin Weight Breakdown for Jessi
+                enableGympinForJessi();
 
                 // Check if setup is completed
                 const setupCompleted = storage.getItem('gymSetupCompleted');
@@ -3022,6 +3185,9 @@
                         }
                         if (config.minimalistPrTracking !== undefined) {
                             setMinimalistPrTracking(config.minimalistPrTracking);
+                        }
+                        if (config.gympinMode !== undefined) {
+                            setGympinMode(config.gympinMode);
                         }
                     }
                     // Fallback to old format for backward compatibility
@@ -3194,7 +3360,8 @@
                     categories: exerciseCategories,
                     prTracking,
                     advancedPrTracking,
-                    minimalistPrTracking
+                    minimalistPrTracking,
+                    gympinMode
                 };
             };
 
@@ -3716,6 +3883,9 @@
                                 if (imported.exerciseConfig.minimalistPrTracking !== undefined) {
                                     setMinimalistPrTracking(imported.exerciseConfig.minimalistPrTracking);
                                 }
+                                if (imported.exerciseConfig.gympinMode !== undefined) {
+                                    setGympinMode(imported.exerciseConfig.gympinMode);
+                                }
                                 storage.setItem('gymExerciseConfig', JSON.stringify(imported.exerciseConfig));
                             }
                         }
@@ -3750,6 +3920,7 @@
                         setPrTracking(false);
                         setAdvancedPrTracking(false);
                         setMinimalistPrTracking(false);
+                        setGympinMode(false);
                         setShowSettings(false);
                         setShowWizard(true); // Show wizard after reset
                     }
@@ -3810,6 +3981,9 @@
                                         }
                                         if (config.minimalistPrTracking !== undefined) {
                                             setMinimalistPrTracking(config.minimalistPrTracking);
+                                        }
+                                        if (config.gympinMode !== undefined) {
+                                            setGympinMode(config.gympinMode);
                                         }
                                     }
                                 }
@@ -3916,6 +4090,9 @@
                             prTracking={prTracking}
                             advancedPrTracking={advancedPrTracking}
                             minimalistPrTracking={minimalistPrTracking}
+                            gympinMode={gympinMode}
+                            expandedWeightBreakdown={expandedWeightBreakdown}
+                            setExpandedWeightBreakdown={setExpandedWeightBreakdown}
                             workoutHistory={workoutHistory}
                         />}
                         {currentView === 'weekly' && <WeeklyView
@@ -4768,7 +4945,7 @@
             );
         }
 
-        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors, prTracking, advancedPrTracking, minimalistPrTracking, workoutHistory }) {
+        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors, prTracking, advancedPrTracking, minimalistPrTracking, gympinMode, expandedWeightBreakdown, setExpandedWeightBreakdown, workoutHistory }) {
             const exercises = getCurrentExercises();
             const todayDay = getTodayDay();
 
@@ -5466,6 +5643,10 @@
                     return undefined;
                 })();
 
+                const gympinConfig = gympinMode ? getWeightBreakdownConfig(exercise.name) : null;
+                const hasGympinBreakdown = !!gympinConfig;
+                const isGympinExpanded = expandedWeightBreakdown === exercise.id;
+
                 return (
                     <div key={exercise.id} data-exercise-id={exercise.id} className={`exercise-card ${isLogged ? 'logged' : ''}`}>
                         <div className="exercise-header">
@@ -5484,7 +5665,127 @@
                                     </div>
                                 )}
                             </div>
+                            {hasGympinBreakdown && (
+                                <button
+                                    data-gympin-breakdown-button={exercise.id}
+                                    onClick={() => setExpandedWeightBreakdown(isGympinExpanded ? null : exercise.id)}
+                                    style={{
+                                        padding: '6px 12px',
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        backgroundColor: '#3a2a5a',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                >
+                                    {isGympinExpanded ? 'Hide' : 'Weight Breakdown'}
+                                </button>
+                            )}
                         </div>
+                        {hasGympinBreakdown && isGympinExpanded && (() => {
+                            const target = parseFloat(stdWeightValue) || 0;
+                            if (target === 0) return null;
+
+                            if (gympinConfig.type === 'pin-stack') {
+                                const breakdown = gympinCalculatePinStackBreakdown(target, gympinConfig);
+                                const renderPinSet = (label, set) => {
+                                    if (!set.overflow) {
+                                        return (
+                                            <div style={{ fontWeight: '600' }}>
+                                                {label}: {set.pinWeight} lbs
+                                            </div>
+                                        );
+                                    }
+                                    const sortedPlates = Object.entries(set.plates)
+                                        .sort((a, b) => parseFloat(b[0]) - parseFloat(a[0]));
+                                    return (
+                                        <div>
+                                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                                                {label}: {set.totalWeight} lbs
+                                            </div>
+                                            <div style={{ marginLeft: '12px' }}>
+                                                Pin: {set.pinWeight} lbs
+                                            </div>
+                                            {sortedPlates.map(([weight, count]) => (
+                                                <div key={weight} style={{ marginLeft: '12px' }}>
+                                                    {weight}s - {count}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                };
+                                const showTopSet = breakdown.topSet.overflow;
+                                return (
+                                    <div data-gympin-breakdown-panel={exercise.id} style={{
+                                        backgroundColor: '#050510', padding: '12px', borderRadius: '8px',
+                                        marginBottom: '12px', fontSize: '13px', fontFamily: 'monospace'
+                                    }}>
+                                        <div style={{ marginBottom: '12px' }}>
+                                            {renderPinSet('Warmup Set #1 (~70%)', breakdown.warmup1)}
+                                        </div>
+                                        <div style={{ marginBottom: showTopSet ? '12px' : '0' }}>
+                                            {renderPinSet('Warmup Set #2 (~90%)', breakdown.warmup2)}
+                                        </div>
+                                        {showTopSet && (
+                                            <div>{renderPinSet('Top Set', breakdown.topSet)}</div>
+                                        )}
+                                    </div>
+                                );
+                            }
+
+                            // plate-loaded
+                            const breakdown = gympinCalculatePlateBreakdown(target, gympinConfig);
+                            const renderPlates = (plates) => {
+                                const sorted = Object.entries(plates).sort((a, b) => parseFloat(b[0]) - parseFloat(a[0]));
+                                return sorted.map(([weight, count]) => (
+                                    <div key={weight} style={{ marginLeft: '12px' }}>{weight}s - {count}</div>
+                                ));
+                            };
+                            const isTwoSided = breakdown.isTwoSided;
+                            return (
+                                <div data-gympin-breakdown-panel={exercise.id} style={{
+                                    backgroundColor: '#050510', padding: '12px', borderRadius: '8px',
+                                    marginBottom: '12px', fontSize: '13px', fontFamily: 'monospace'
+                                }}>
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                                            Warmup Set #1 ({(isTwoSided ? breakdown.warmup1.perSideWeight * 2 : breakdown.warmup1.perSideWeight)} lbs - ~70%):
+                                        </div>
+                                        {isTwoSided && (
+                                            <div style={{ marginLeft: '12px', fontStyle: 'italic', color: '#666' }}>
+                                                Per side: {breakdown.warmup1.perSideWeight} lbs
+                                            </div>
+                                        )}
+                                        {renderPlates(breakdown.warmup1.plates)}
+                                    </div>
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                                            Warmup Set #2 ({(isTwoSided ? breakdown.warmup2.perSideWeight * 2 : breakdown.warmup2.perSideWeight)} lbs - ~90%):
+                                        </div>
+                                        {isTwoSided && (
+                                            <div style={{ marginLeft: '12px', fontStyle: 'italic', color: '#666' }}>
+                                                Per side: {breakdown.warmup2.perSideWeight} lbs
+                                            </div>
+                                        )}
+                                        {renderPlates(breakdown.warmup2.plates)}
+                                    </div>
+                                    <div>
+                                        <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                                            Top Set ({(isTwoSided ? breakdown.topSet.perSideWeight * 2 : breakdown.topSet.perSideWeight)} lbs):
+                                        </div>
+                                        {isTwoSided && (
+                                            <div style={{ marginLeft: '12px', fontStyle: 'italic', color: '#666' }}>
+                                                Per side: {breakdown.topSet.perSideWeight} lbs
+                                            </div>
+                                        )}
+                                        {renderPlates(breakdown.topSet.plates)}
+                                    </div>
+                                </div>
+                            );
+                        })()}
                         {advancedPrTracking ? (
                             advPrWeightRecovery ? (
                                 <div style={{ color: '#4CAF50', padding: '8px 12px', borderRadius: '6px', marginBottom: '12px', fontWeight: '600', fontSize: '14px', textAlign: 'center' }}>
