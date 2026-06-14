@@ -2938,9 +2938,9 @@
             if (/preacher/.test(n))              return { type: 'plate-loaded', plateMode: 'one-sided' };
             if (/stiff legged|deadlift/.test(n)) return { type: 'plate-loaded', plateMode: 'two-sided' };
             if (/pendulum|squat/.test(n))        return { type: 'plate-loaded', plateMode: 'one-sided' };
-            if (/hammer row/.test(n))            return { type: 'plate-loaded', plateMode: 'one-sided' };
+            if (/hammer row|sagittal/.test(n))   return { type: 'plate-loaded', plateMode: 'one-sided' };
             if (/\bdip|weighted dip|overhead tricep/.test(n))
-                                                 return { type: 'plate-loaded', plateMode: 'one-sided' };
+                                                 return { type: 'plate-loaded', plateMode: 'two-sided' };
 
             // Pin-stack with overflow cap — cable wrist curls maxes at 97.5 then
             // accepts hanging plates one-sided.
@@ -2949,10 +2949,10 @@
 
             // Plain pin-stack — any other Jessi-program movement that uses a stack.
             if (/chest fl/.test(n))                                return { type: 'pin-stack' };
-            if (/sagittal|frontal plane|pulldown/.test(n))         return { type: 'pin-stack' };
+            if (/frontal plane|pulldown/.test(n))                  return { type: 'pin-stack' };
             if (/transverse|upper back row|seated row/.test(n))    return { type: 'pin-stack' };
             if (/lateral raise/.test(n))                           return { type: 'pin-stack' };
-            if (/kelso|shrug/.test(n))                             return { type: 'pin-stack' };
+            if (/kelso|shrug/.test(n))                             return { type: 'pin-stack', maxPin: 200, overflowPlateMode: 'one-sided' };
             if (/shoulder press/.test(n))                          return { type: 'pin-stack' };
             if (/tricep pushdown|pushdown/.test(n))                return { type: 'pin-stack' };
             if (/reverse.*wrist|wrist curl/.test(n))               return { type: 'pin-stack' };
