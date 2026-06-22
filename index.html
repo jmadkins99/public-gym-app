@@ -2786,15 +2786,15 @@
             storage.setItem('jessiAPMigrationApplied', 'true');
         }
 
-        // Reclassify Jessi's exerciseConfig into the Torso/Limbs split by name pattern,
-        // and impose the canonical exercise order to mirror the personal-app program.
-        // Reclassifies on every run so subsequent revisions (e.g. moving ab-crunch from
-        // Limbs to Torso) take effect without manual reset. Handles either Anterior/
-        // Posterior or Torso/Limbs as the starting state. Preserves UUIDs + custom
-        // names. Gated by jessiTLMigrationApplied5 so it re-runs for anyone who hit
-        // an earlier revision.
-        function migrateJessiToTorsoLimbs() {
-            if (storage.getItem('jessiTLMigrationApplied5') === 'true') return;
+        // Collapse Jessi's exerciseConfig into a single "Full Body" day. Handles
+        // any of her prior shapes (Anterior/Posterior, Push/Pull/Legs, Torso/Limbs).
+        // Drops three exercises that are not in the new program: lateral raises,
+        // reverse wrist curls, cable wrist curls. Their workoutHistory entries
+        // remain in storage but won't display in the program. Also collapses
+        // the schedule so every workout day points to dayNumber 1.
+        // Gated by jessiFullBodyMigrationApplied1.
+        function migrateJessiToFullBody() {
+            if (storage.getItem('jessiFullBodyMigrationApplied1') === 'true') return;
 
             const raw = storage.getItem('gymExerciseConfig');
             if (!raw) return;
@@ -2805,89 +2805,71 @@
             const cats = (config.categories || []).map(c => String(c).toLowerCase());
             const isAP = cats.length === 2 && cats.includes('anterior') && cats.includes('posterior');
             const isTL = cats.length === 2 && cats.includes('torso') && cats.includes('limbs');
-            if (!isAP && !isTL) return;
+            const isFB = cats.length === 1 && cats.includes('full body');
+            if (!isAP && !isTL && !isFB) return;
 
-            const day1 = (config.days[1] || []).slice();
-            const day2 = (config.days[2] || []).slice();
+            const allExercises = Object.values(config.days).flat();
 
-            // Classify by name keyword. Torso checked first so "Overhead Tricep
-            // Extension" (Jessi's stale name for Weighted Dips) lands on Torso
-            // rather than being miscaught by a generic tricep rule. `dip` and
-            // `transverse` cover Jessi's older display names ("Dips",
-            // "Transverse Plane Rows") that older revisions missed.
-            const classify = (name) => {
+            // Drop three exercises that aren't in the new program.
+            const isDropped = (name) => {
                 const n = String(name || '').toLowerCase();
-                if (/chest|seated row|upper back row|hammer row|transverse|frontal plane|pulldown|kelso|shrug|shoulder press|overhead tricep|weighted dip|\bdip|lateral raise/.test(n)) {
-                    return 'Torso';
-                }
-                if (/preacher|tricep pushdown|wrist curl|leg extension|hip adduction|deadlift|stiff legged|pendulum|squat|calf|ab crunch|crunch/.test(n)) {
-                    return 'Limbs';
-                }
-                return null;
+                return /lateral raise|reverse.*wrist|cable wrist/.test(n);
             };
 
-            // Canonical order map (mirrors the personal-app program). Specificity
-            // matters: incline checked before plain chest press; reverse-wrist
-            // checked before generic wrist curl; etc. Unknown names get 999 and
-            // sort to the end.
-            const getDesiredOrder = (category, name) => {
+            // Canonical order for Jessi's Full Body program. Mirrors the personal app
+            // minus the dropped exercises. Specificity matters: incline before plain
+            // chest, sagittal before pulldown, kelso before shrug.
+            const getDesiredOrder = (name) => {
                 const n = String(name || '').toLowerCase();
-                if (category === 'Torso') {
-                    if (/incline/.test(n)) return 1;
-                    if (/chest fl|chest press|flat chest/.test(n)) return 0;
-                    if (/seated row|hammer row|sagittal/.test(n)) return 2;
-                    if (/weighted dip|overhead tricep|\bdip/.test(n)) return 3;
-                    if (/lateral/.test(n)) return 4;
-                    if (/frontal/.test(n)) return 5;
-                    if (/upper back row|transverse/.test(n)) return 6;
-                    if (/kelso|shrug/.test(n)) return 7;
-                    if (/shoulder press/.test(n)) return 8;
-                    return 999;
-                }
-                if (/preacher/.test(n)) return 0;
-                if (/tricep pushdown|pushdown/.test(n)) return 1;
-                if (/reverse.*wrist|reverse wrist/.test(n)) return 2;
-                if (/wrist curl/.test(n)) return 3;
-                if (/ab crunch|crunch/.test(n)) return 4;
-                if (/calf/.test(n)) return 5;
-                if (/hip adduction|leg extension/.test(n)) return 6;
-                if (/stiff legged|deadlift/.test(n)) return 7;
-                if (/pendulum|squat/.test(n)) return 8;
+                if (/preacher/.test(n))                        return 0;
+                if (/tricep pushdown|pushdown|tricep ext/.test(n)) return 1;
+                if (/chest fl/.test(n))                        return 2;
+                if (/incline/.test(n))                         return 3;
+                if (/sagittal|seated row|hammer row/.test(n))  return 4;
+                if (/frontal/.test(n))                         return 5;
+                if (/transverse|upper back row/.test(n))       return 6;
+                if (/kelso/.test(n))                           return 7;
+                if (/shoulder press/.test(n))                  return 8;
+                if (/ab crunch|crunch/.test(n))                return 9;
+                if (/calf/.test(n))                            return 10;
+                if (/hip adduction|leg extension/.test(n))     return 11;
+                if (/stiff legged|deadlift/.test(n))           return 12;
+                if (/pendulum|squat/.test(n))                  return 13;
                 return 999;
             };
 
-            const torso = [];
-            const limbs = [];
-
-            // Always reclassify by name (whether starting from AP or TL) so day
-            // reassignments from later revisions take effect.
-            [...day1, ...day2].forEach(ex => {
-                const target = classify(ex.name);
-                if (target === 'Torso') {
-                    torso.push({ ...ex, category: 'Torso' });
-                } else {
-                    // Unknown / unmatched names fall through to Limbs.
-                    limbs.push({ ...ex, category: 'Limbs' });
-                }
-            });
-
-            torso.sort((a, b) => getDesiredOrder('Torso', a.name) - getDesiredOrder('Torso', b.name));
-            limbs.sort((a, b) => getDesiredOrder('Limbs', a.name) - getDesiredOrder('Limbs', b.name));
-
-            const reindex = (arr) => arr.map((ex, idx) => ({ ...ex, order: idx }));
+            const kept = allExercises
+                .filter(ex => !isDropped(ex.name))
+                .map(ex => ({ ...ex, category: 'Full Body' }))
+                .sort((a, b) => getDesiredOrder(a.name) - getDesiredOrder(b.name))
+                .map((ex, idx) => ({ ...ex, order: idx }));
 
             const newConfig = {
                 ...config,
                 version: 2,
-                days: {
-                    1: reindex(torso),
-                    2: reindex(limbs)
-                },
-                categories: ['Torso', 'Limbs']
+                days: { 1: kept },
+                categories: ['Full Body']
             };
 
             storage.setItem('gymExerciseConfig', JSON.stringify(newConfig));
-            storage.setItem('jessiTLMigrationApplied5', 'true');
+
+            // Collapse schedule so every weekday-mapped workout points to day 1.
+            const rawSchedule = storage.getItem('gymScheduleConfig');
+            if (rawSchedule) {
+                try {
+                    const sched = JSON.parse(rawSchedule);
+                    if (sched && Array.isArray(sched.workoutDays)) {
+                        const updatedSchedule = {
+                            ...sched,
+                            workoutDays: sched.workoutDays.map(d => ({ ...d, workoutDayNumber: 1 })),
+                            totalWorkoutDays: 1
+                        };
+                        storage.setItem('gymScheduleConfig', JSON.stringify(updatedSchedule));
+                    }
+                } catch (e) { /* leave schedule alone */ }
+            }
+
+            storage.setItem('jessiFullBodyMigrationApplied1', 'true');
         }
 
         // One-shot: auto-enable gympinMode for Jessi's installs without requiring
@@ -2907,7 +2889,8 @@
             const cats = (config.categories || []).map(c => String(c).toLowerCase());
             const isAP = cats.length === 2 && cats.includes('anterior') && cats.includes('posterior');
             const isTL = cats.length === 2 && cats.includes('torso') && cats.includes('limbs');
-            if (!isAP && !isTL) return;
+            const isFB = cats.length === 1 && cats.includes('full body');
+            if (!isAP && !isTL && !isFB) return;
 
             config.gympinMode = true;
             storage.setItem('gymExerciseConfig', JSON.stringify(config));
@@ -3106,7 +3089,7 @@
                 migrateJessiToAnteriorPosterior();
 
                 // One-shot Torso/Limbs migration for Jessi's Anterior/Posterior data
-                migrateJessiToTorsoLimbs();
+                migrateJessiToFullBody();
 
                 // One-shot auto-enable of gympin Weight Breakdown for Jessi
                 enableGympinForJessi();
