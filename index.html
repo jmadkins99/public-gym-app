@@ -2794,12 +2794,10 @@
         // entries remain in storage but won't display in the program. Renames
         // "Leg Extensions" → "Hip Adduction" to match the personal-app display.
         // Also collapses the schedule so every workout day points to dayNumber 1.
-        // Gated by jessiFullBodyMigrationApplied3 (bumped to apply the
-        // remaining personal-app display-name renames: Tricep Pushdown →
-        // Tricep Extensions, Shoulder Press Machine → Shoulder Press,
-        // Ab Crunch Machine → Ab Crunches).
+        // Gated by jessiFullBodyMigrationApplied4 (bumped to swap Ab Crunches
+        // before Shoulder Press in the canonical order).
         function migrateJessiToFullBody() {
-            if (storage.getItem('jessiFullBodyMigrationApplied3') === 'true') return;
+            if (storage.getItem('jessiFullBodyMigrationApplied4') === 'true') return;
 
             const raw = storage.getItem('gymExerciseConfig');
             if (!raw) return;
@@ -2846,8 +2844,8 @@
                 if (/frontal/.test(n))                         return 5;
                 if (/transverse|upper back row/.test(n))       return 6;
                 if (/kelso/.test(n))                           return 7;
-                if (/shoulder press/.test(n))                  return 8;
-                if (/ab crunch|crunch/.test(n))                return 9;
+                if (/ab crunch|crunch/.test(n))                return 8;
+                if (/shoulder press/.test(n))                  return 9;
                 if (/calf/.test(n))                            return 10;
                 if (/hip adduction|leg extension/.test(n))     return 11;
                 if (/stiff legged|deadlift/.test(n))           return 12;
@@ -2886,7 +2884,7 @@
                 } catch (e) { /* leave schedule alone */ }
             }
 
-            storage.setItem('jessiFullBodyMigrationApplied3', 'true');
+            storage.setItem('jessiFullBodyMigrationApplied4', 'true');
         }
 
         // One-shot: auto-enable gympinMode for Jessi's installs without requiring
