@@ -2787,14 +2787,17 @@
         }
 
         // Collapse Jessi's exerciseConfig into a single "Full Body" day. Handles
-        // any of her prior shapes (Anterior/Posterior, Push/Pull/Legs, Torso/Limbs).
-        // Drops three exercises that are not in the new program: lateral raises,
-        // reverse wrist curls, cable wrist curls. Their workoutHistory entries
-        // remain in storage but won't display in the program. Also collapses
-        // the schedule so every workout day points to dayNumber 1.
-        // Gated by jessiFullBodyMigrationApplied1.
+        // any of her prior shapes (Anterior/Posterior, Push/Pull/Legs, Torso/Limbs,
+        // or an already-migrated Full Body that needs the flag-2 fixes).
+        // Drops four exercises that are not in the new program: lateral raises,
+        // reverse wrist curls, cable wrist curls, dips. Their workoutHistory
+        // entries remain in storage but won't display in the program. Renames
+        // "Leg Extensions" → "Hip Adduction" to match the personal-app display.
+        // Also collapses the schedule so every workout day points to dayNumber 1.
+        // Gated by jessiFullBodyMigrationApplied2 (bumped from 1 to re-run with
+        // the Dips drop + Leg Extensions rename fixes).
         function migrateJessiToFullBody() {
-            if (storage.getItem('jessiFullBodyMigrationApplied1') === 'true') return;
+            if (storage.getItem('jessiFullBodyMigrationApplied2') === 'true') return;
 
             const raw = storage.getItem('gymExerciseConfig');
             if (!raw) return;
@@ -2810,10 +2813,21 @@
 
             const allExercises = Object.values(config.days).flat();
 
-            // Drop three exercises that aren't in the new program.
+            // Drop four exercises that aren't in the new program. `dip` matches
+            // "Dips" / "Weighted Dips" / "Overhead Tricep Extension" — Jessi's
+            // historical names for the movement the personal app also dropped.
             const isDropped = (name) => {
                 const n = String(name || '').toLowerCase();
-                return /lateral raise|reverse.*wrist|cable wrist/.test(n);
+                return /lateral raise|reverse.*wrist|cable wrist|\bdip|weighted dip|overhead tricep/.test(n);
+            };
+
+            // Display-name rewrites to mirror personal-app naming. Currently
+            // only Leg Extensions → Hip Adduction. (User explicitly chose to
+            // keep other Jessi-specific names like "Shoulder Press Machine".)
+            const renameDisplay = (name) => {
+                const n = String(name || '').toLowerCase();
+                if (/leg extension/.test(n)) return 'Hip Adduction';
+                return name;
             };
 
             // Canonical order for Jessi's Full Body program. Mirrors the personal app
@@ -2840,7 +2854,7 @@
 
             const kept = allExercises
                 .filter(ex => !isDropped(ex.name))
-                .map(ex => ({ ...ex, category: 'Full Body' }))
+                .map(ex => ({ ...ex, name: renameDisplay(ex.name), category: 'Full Body' }))
                 .sort((a, b) => getDesiredOrder(a.name) - getDesiredOrder(b.name))
                 .map((ex, idx) => ({ ...ex, order: idx }));
 
@@ -2869,7 +2883,7 @@
                 } catch (e) { /* leave schedule alone */ }
             }
 
-            storage.setItem('jessiFullBodyMigrationApplied1', 'true');
+            storage.setItem('jessiFullBodyMigrationApplied2', 'true');
         }
 
         // One-shot: auto-enable gympinMode for Jessi's installs without requiring
