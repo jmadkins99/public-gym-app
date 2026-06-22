@@ -2794,10 +2794,12 @@
         // entries remain in storage but won't display in the program. Renames
         // "Leg Extensions" → "Hip Adduction" to match the personal-app display.
         // Also collapses the schedule so every workout day points to dayNumber 1.
-        // Gated by jessiFullBodyMigrationApplied2 (bumped from 1 to re-run with
-        // the Dips drop + Leg Extensions rename fixes).
+        // Gated by jessiFullBodyMigrationApplied3 (bumped to apply the
+        // remaining personal-app display-name renames: Tricep Pushdown →
+        // Tricep Extensions, Shoulder Press Machine → Shoulder Press,
+        // Ab Crunch Machine → Ab Crunches).
         function migrateJessiToFullBody() {
-            if (storage.getItem('jessiFullBodyMigrationApplied2') === 'true') return;
+            if (storage.getItem('jessiFullBodyMigrationApplied3') === 'true') return;
 
             const raw = storage.getItem('gymExerciseConfig');
             if (!raw) return;
@@ -2821,12 +2823,13 @@
                 return /lateral raise|reverse.*wrist|cable wrist|\bdip|weighted dip|overhead tricep/.test(n);
             };
 
-            // Display-name rewrites to mirror personal-app naming. Currently
-            // only Leg Extensions → Hip Adduction. (User explicitly chose to
-            // keep other Jessi-specific names like "Shoulder Press Machine".)
+            // Display-name rewrites to mirror personal-app naming.
             const renameDisplay = (name) => {
                 const n = String(name || '').toLowerCase();
-                if (/leg extension/.test(n)) return 'Hip Adduction';
+                if (/leg extension/.test(n))              return 'Hip Adduction';
+                if (/tricep pushdown|^pushdown$/.test(n)) return 'Tricep Extensions';
+                if (/shoulder press/.test(n))             return 'Shoulder Press';
+                if (/ab crunch|crunch/.test(n))           return 'Ab Crunches';
                 return name;
             };
 
@@ -2883,7 +2886,7 @@
                 } catch (e) { /* leave schedule alone */ }
             }
 
-            storage.setItem('jessiFullBodyMigrationApplied2', 'true');
+            storage.setItem('jessiFullBodyMigrationApplied3', 'true');
         }
 
         // One-shot: auto-enable gympinMode for Jessi's installs without requiring
@@ -2951,7 +2954,7 @@
             if (/lateral raise/.test(n))                           return { type: 'pin-stack' };
             if (/kelso|shrug/.test(n))                             return { type: 'pin-stack', maxPin: 200, overflowPlateMode: 'one-sided' };
             if (/shoulder press/.test(n))                          return { type: 'pin-stack' };
-            if (/tricep pushdown|pushdown/.test(n))                return { type: 'pin-stack' };
+            if (/tricep pushdown|pushdown|tricep ext/.test(n))     return { type: 'pin-stack' };
             if (/reverse.*wrist|wrist curl/.test(n))               return { type: 'pin-stack' };
             if (/ab crunch|crunch/.test(n))                        return { type: 'pin-stack' };
             if (/calf/.test(n))                                    return { type: 'pin-stack' };
