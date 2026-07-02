@@ -1189,7 +1189,7 @@
                             exercises: [
                                 { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Incline Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Seated Row Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Sagittal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Overhead Tricep Extension', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Upper Back Row Machine', sets: 1, minReps: 6, maxReps: 8 },
@@ -2984,16 +2984,28 @@
         function gympinCalculatePlateBreakdown(totalWeight, config) {
             const isTwoSided = config.plateMode === 'two-sided';
             const perSide = (w) => isTwoSided ? w / 2 : w;
-            const buildSet = (target) => ({
-                totalWeight: target,
-                perSideWeight: perSide(target),
-                plates: gympinBreakdownPlatesFloor(perSide(target)),
-            });
+            // Warmup per-side weights round to the nearest 10 lb (an exact halfway
+            // value rounds DOWN) so warmups load with clean plates and no 2.5/1.25
+            // micro-plates. The top set is never rounded — it shows the exact
+            // working weight. Mirrors gym_app calculatePlateBreakdown.
+            const roundWarmupPerSide = (w) => {
+                const base = Math.floor(w / 10) * 10;
+                const remainder = parseFloat((w - base).toFixed(4));
+                return remainder > 5 ? base + 10 : base;
+            };
+            const buildSet = (target, roundWarmup) => {
+                const ps = roundWarmup ? roundWarmupPerSide(perSide(target)) : perSide(target);
+                return {
+                    totalWeight: isTwoSided ? ps * 2 : ps,
+                    perSideWeight: ps,
+                    plates: gympinBreakdownPlatesFloor(ps),
+                };
+            };
             return {
                 isTwoSided,
-                warmup1: buildSet(totalWeight * 0.7),
-                warmup2: buildSet(totalWeight * 0.9),
-                topSet:  buildSet(totalWeight),
+                warmup1: buildSet(totalWeight * 0.7, true),
+                warmup2: buildSet(totalWeight * 0.9, true),
+                topSet:  buildSet(totalWeight, false),
             };
         }
 
