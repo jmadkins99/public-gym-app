@@ -1187,7 +1187,7 @@
                         1: {
                             name: 'Torso',
                             exercises: [
-                                { name: 'Flat Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Incline Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Seated Row Machine', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Overhead Tricep Extension', sets: 1, minReps: 6, maxReps: 8 },
@@ -1209,8 +1209,8 @@
                                 { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Leg Extensions', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Stiff Legged Deadlifts', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Pendulum Squats', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Leg Press', sets: 1, minReps: 6, maxReps: 8 },
                             ]
                         }
 
@@ -2848,8 +2848,8 @@
                 if (/shoulder press/.test(n))                  return 9;
                 if (/calf/.test(n))                            return 10;
                 if (/hip adduction|leg extension/.test(n))     return 11;
-                if (/stiff legged|deadlift/.test(n))           return 12;
-                if (/pendulum|squat/.test(n))                  return 13;
+                if (/stiff legged|deadlift|back extension/.test(n)) return 12;
+                if (/pendulum|squat|leg press/.test(n))        return 13;
                 return 999;
             };
 
@@ -2936,6 +2936,8 @@
             if (/preacher/.test(n))              return { type: 'plate-loaded', plateMode: 'one-sided' };
             if (/stiff legged|deadlift/.test(n)) return { type: 'plate-loaded', plateMode: 'two-sided' };
             if (/pendulum|squat/.test(n))        return { type: 'plate-loaded', plateMode: 'one-sided' };
+            if (/leg press/.test(n))             return { type: 'plate-loaded', plateMode: 'two-sided' };
+            if (/back extension/.test(n))        return { type: 'plate-loaded', plateMode: 'one-sided' };
             if (/hammer row|sagittal/.test(n))   return { type: 'plate-loaded', plateMode: 'one-sided' };
             if (/\bdip|weighted dip|overhead tricep/.test(n))
                                                  return { type: 'plate-loaded', plateMode: 'two-sided' };
