@@ -1178,8 +1178,16 @@
                     }
                 },
 
+                // Must stay in lockstep with migrateJessiToFullBody's
+                // getDesiredOrder: the preset serves fresh installs, the
+                // migration serves devices that already exist, and both have to
+                // produce the same program. This preset sat frozen in the
+                // Torso/Limbs era from f4afffc through the Full Body switch in
+                // 2d88aba, so a coach-code install rendered the old two-day
+                // split until a refresh let the migration fix it. Test 33 pins
+                // the two together by asserting a refresh changes nothing.
                 'jessi': {
-                    name: 'Torso - Limbs',
+                    name: 'Full Body',
                     minimalistPrTracking: true,
                     gympinMode: true,
                     repsDropdown: { min: 5, max: 8 },
@@ -1187,30 +1195,20 @@
                     workoutDays: {
 
                         1: {
-                            name: 'Torso',
+                            name: 'Full Body',
                             exercises: [
                                 { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Incline Chest Press Machine', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Sagittal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Overhead Tricep Extension', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Upper Back Row Machine', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Shoulder Press Machine', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Ab Crunch Machine', sets: 1, minReps: 6, maxReps: 8 },
-                            ]
-                        },
-
-                        2: {
-                            name: 'Limbs',
-                            exercises: [
                                 { name: 'Recline Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Tricep Pushdown', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Cable Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Incline Chest Press', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Transverse Plane Rows', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Sagittal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Leg Extensions', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Leg Press', sets: 1, minReps: 6, maxReps: 8 },
                             ]
