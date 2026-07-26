@@ -1202,7 +1202,7 @@
                         2: {
                             name: 'Limbs',
                             exercises: [
-                                { name: 'Preacher Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Recline Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Tricep Pushdown', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Cable Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
@@ -2794,10 +2794,10 @@
         // entries remain in storage but won't display in the program. Renames
         // "Leg Extensions" → "Hip Adduction" to match the personal-app display.
         // Also collapses the schedule so every workout day points to dayNumber 1.
-        // Gated by jessiFullBodyMigrationApplied4 (bumped to swap Ab Crunches
-        // before Shoulder Press in the canonical order).
+        // Gated by jessiFullBodyMigrationApplied5 (bumped for the 14-slot
+        // reorder and the Preacher Curls -> Recline Curls rename).
         function migrateJessiToFullBody() {
-            if (storage.getItem('jessiFullBodyMigrationApplied4') === 'true') return;
+            if (storage.getItem('jessiFullBodyMigrationApplied5') === 'true') return;
 
             const raw = storage.getItem('gymExerciseConfig');
             if (!raw) return;
@@ -2828,22 +2828,26 @@
                 if (/tricep pushdown|^pushdown$/.test(n)) return 'Tricep Extensions';
                 if (/shoulder press/.test(n))             return 'Shoulder Press';
                 if (/ab crunch|crunch/.test(n))           return 'Ab Crunches';
+                if (/preacher|recline/.test(n))           return 'Recline Curls';
                 return name;
             };
 
-            // Canonical order for Jessi's Full Body program. Mirrors the personal app
-            // minus the dropped exercises. Specificity matters: incline before plain
-            // chest, sagittal before pulldown, kelso before shrug.
+            // Canonical order for Jessi's Full Body program (14 slots, as run
+            // July 2026). Runs AFTER renameDisplay, so it matches post-rename
+            // names ("Recline Curls", "Tricep Extensions", "Ab Crunches") as
+            // well as the legacy names still sitting in older configs.
+            // Anything unrecognized falls to 999 and lands at the bottom
+            // rather than being dropped.
             const getDesiredOrder = (name) => {
                 const n = String(name || '').toLowerCase();
-                if (/preacher/.test(n))                        return 0;
-                if (/tricep pushdown|pushdown|tricep ext/.test(n)) return 1;
-                if (/chest fl/.test(n))                        return 2;
-                if (/incline/.test(n))                         return 3;
-                if (/sagittal|seated row|hammer row/.test(n))  return 4;
-                if (/frontal/.test(n))                         return 5;
-                if (/transverse|upper back row/.test(n))       return 6;
-                if (/kelso/.test(n))                           return 7;
+                if (/chest fl/.test(n))                        return 0;
+                if (/preacher|recline/.test(n))                return 1;
+                if (/incline/.test(n))                         return 2;
+                if (/transverse|upper back row/.test(n))       return 3;
+                if (/kelso|shrug/.test(n))                     return 4;
+                if (/sagittal|seated row|hammer row/.test(n))  return 5;
+                if (/tricep pushdown|pushdown|tricep ext/.test(n)) return 6;
+                if (/frontal/.test(n))                         return 7;
                 if (/ab crunch|crunch/.test(n))                return 8;
                 if (/shoulder press/.test(n))                  return 9;
                 if (/calf/.test(n))                            return 10;
@@ -2884,7 +2888,7 @@
                 } catch (e) { /* leave schedule alone */ }
             }
 
-            storage.setItem('jessiFullBodyMigrationApplied4', 'true');
+            storage.setItem('jessiFullBodyMigrationApplied5', 'true');
         }
 
         // One-shot: auto-enable gympinMode for Jessi's installs without requiring
@@ -2933,6 +2937,8 @@
             // beats a generic "chest" rule. one-sided = plates hang on one arm,
             // total = perSide; two-sided = plates on both arms, total = 2 * perSide.
             if (/incline/.test(n))               return { type: 'plate-loaded', plateMode: 'two-sided' };
+            // Jessi's preacher station is renamed "Recline Curls" and is a pin
+            // stack (see below); this plate-loaded rule is for everyone else's.
             if (/preacher/.test(n))              return { type: 'plate-loaded', plateMode: 'one-sided' };
             if (/stiff legged|deadlift/.test(n)) return { type: 'plate-loaded', plateMode: 'two-sided' };
             if (/pendulum|squat/.test(n))        return { type: 'plate-loaded', plateMode: 'one-sided' };
@@ -2951,6 +2957,7 @@
                 return { type: 'pin-stack', maxPin: 97.5, overflowPlateMode: 'one-sided' };
 
             // Plain pin-stack — any other Jessi-program movement that uses a stack.
+            if (/recline/.test(n))                                 return { type: 'pin-stack' };
             if (/chest fl/.test(n))                                return { type: 'pin-stack' };
             if (/frontal plane|pulldown/.test(n))                  return { type: 'pin-stack' };
             if (/seated row/.test(n))                              return { type: 'pin-stack' };
