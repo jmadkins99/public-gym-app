@@ -1365,6 +1365,68 @@
             removeItem: (key) => localStorage.removeItem(APP_NAMESPACE + key),
         };
 
+        // Storage repository seam. The four synced keys (workout history,
+        // exercise config, schedule, setup-completed) are written through
+        // `repo`; device-local keys (tutorial/backup-reminder flags, week
+        // cache, one-shot migration sentinels) bypass it on purpose. A
+        // cloud-backed implementation slots in behind the same interface.
+        // Promise/.then style only — @babel/standalone lowers async/await to
+        // regenerator form, which crashes without a polyfill.
+        function createLocalStorageRepo() {
+            const parse = (raw) => {
+                if (!raw) return null;
+                try {
+                    return JSON.parse(raw);
+                } catch (e) {
+                    console.warn('[repo] Ignoring unparseable stored value:', e);
+                    return null;
+                }
+            };
+
+            return {
+                mode: 'local',
+
+                loadAll: () => Promise.resolve({
+                    workoutHistory: parse(storage.getItem('gymWorkoutHistory')),
+                    exerciseConfig: parse(storage.getItem('gymExerciseConfig')),
+                    scheduleConfig: parse(storage.getItem('gymScheduleConfig')),
+                    setupCompleted: parse(storage.getItem('gymSetupCompleted')),
+                }),
+
+                // Fire-and-forget saves: callers never await these.
+                saveHistory: (history) => {
+                    storage.setItem('gymWorkoutHistory', JSON.stringify(history));
+                },
+                saveExerciseConfig: (config) => {
+                    storage.setItem('gymExerciseConfig', JSON.stringify(config));
+                },
+                saveScheduleConfig: (schedule) => {
+                    storage.setItem('gymScheduleConfig', JSON.stringify(schedule));
+                },
+                saveSetupCompleted: (setup) => {
+                    storage.setItem('gymSetupCompleted', JSON.stringify(setup));
+                },
+
+                clearAll: () => {
+                    storage.removeItem('gymWorkoutHistory');
+                    storage.removeItem('gymExerciseConfig');
+                    storage.removeItem('gymScheduleConfig');
+                    storage.removeItem('gymSetupCompleted');
+                    return Promise.resolve();
+                },
+
+                status: () => ({ mode: 'local', signedIn: false, pendingWrites: 0 }),
+            };
+        }
+
+        // Repo selection. Always the localStorage repo for now; the cloud
+        // implementation hooks in here (auth state decides).
+        const repoReady = Promise.resolve(createLocalStorageRepo()).then((repo) => {
+            window.repo = repo;
+            return repo;
+        });
+        window.repoReady = repoReady;
+
         // Migrate existing data to namespaced keys (one-time migration for existing users)
         function migrateToNamespacedStorage() {
             const keysToMigrate = ['gymWorkoutHistory', 'gymExerciseConfig', 'lastBackupReminder'];
@@ -1612,19 +1674,20 @@
                         allCategories.add(dayData.name);
                     });
 
-                    // Save to localStorage immediately so data is ready when animation finishes
-                    storage.setItem('gymSetupCompleted', JSON.stringify({
+                    // Save immediately so data is ready when animation finishes
+                    // (repo saves also land in localStorage synchronously).
+                    window.repo.saveSetupCompleted({
                         version: 1,
                         completed: true,
                         completedAt: new Date().toISOString()
-                    }));
+                    });
 
-                    storage.setItem('gymScheduleConfig', JSON.stringify({
+                    window.repo.saveScheduleConfig({
                         version: 2,
                         ...generatedSchedule
-                    }));
+                    });
 
-                    storage.setItem('gymExerciseConfig', JSON.stringify({
+                    window.repo.saveExerciseConfig({
                         version: 2,
                         days: exercisesByDay,
                         categories: Array.from(allCategories),
@@ -1637,7 +1700,7 @@
                         // need a second load before either feature appeared.
                         gympinMode: preset.gympinMode || false,
                         repsDropdown: preset.repsDropdown || null
-                    }));
+                    });
 
                     // Wait for animation to complete, then hide and load app
                     setTimeout(() => {
@@ -1730,23 +1793,23 @@
                     allCategories.add(dayData.name);
                 });
 
-                // Save to localStorage
-                storage.setItem('gymSetupCompleted', JSON.stringify({
+                // Save through the repo (also lands in localStorage synchronously)
+                window.repo.saveSetupCompleted({
                     version: 1,
                     completed: true,
                     completedAt: new Date().toISOString()
-                }));
+                });
 
-                storage.setItem('gymScheduleConfig', JSON.stringify({
+                window.repo.saveScheduleConfig({
                     version: 2,
                     ...schedule
-                }));
+                });
 
-                storage.setItem('gymExerciseConfig', JSON.stringify({
+                window.repo.saveExerciseConfig({
                     version: 2,
                     days: exercisesByDay,
                     categories: Array.from(allCategories)
-                }));
+                });
 
                 onComplete();
             };
@@ -3140,27 +3203,20 @@
             const [viewingWeek, setViewingWeek] = useState(1);
             const [showWizard, setShowWizard] = useState(false);
             const [fieldErrors, setFieldErrors] = useState({});
+            const [hydrated, setHydrated] = useState(false);
             const currentWeek = useMemo(() => getCurrentWeek(workoutHistory), [workoutHistory]);
             const hasMigratedWeeks = useRef(false);
 
             useEffect(() => {
+                window.repoReady.then((repo) => {
+                // Legacy localStorage-era migrations. Only meaningful in local
+                // mode: cloud data is imported post-migration, and a fresh
+                // device must not re-run one-shots just because its own
+                // localStorage lacks the sentinel flags. They reshape the
+                // stored keys, so they run before loadAll reads them.
+                if (repo.mode === 'local') {
                 // Migrate existing data to namespaced storage (one-time for existing users)
                 migrateToNamespacedStorage();
-
-                // ?gympin=on / ?gympin=off — coach-only toggle. Flip the flag on
-                // the persisted exerciseConfig, strip the param, then continue
-                // booting so the regular load reads the new value.
-                const params = new URLSearchParams(window.location.search);
-                const gympinParam = params.get('gympin');
-                if (gympinParam === 'on' || gympinParam === 'off') {
-                    const raw = storage.getItem('gymExerciseConfig');
-                    const cfg = raw ? (() => { try { return JSON.parse(raw); } catch (e) { return {}; } })() : {};
-                    cfg.gympinMode = (gympinParam === 'on');
-                    storage.setItem('gymExerciseConfig', JSON.stringify(cfg));
-                    params.delete('gympin');
-                    const cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
-                    window.history.replaceState({}, '', cleanUrl);
-                }
 
                 // One-shot Anterior/Posterior migration for Jessi's PPL data
                 migrateJessiToAnteriorPosterior();
@@ -3198,27 +3254,47 @@
                     } else {
                         // New user - show wizard
                         setShowWizard(true);
+                        setHydrated(true);
                         return; // Don't load data yet
                     }
                 }
+                }
+
+                return repo.loadAll().then(({ workoutHistory: savedHistory, exerciseConfig: savedConfig, scheduleConfig: savedSchedule, setupCompleted: savedSetup }) => {
+                // Cloud mode, nothing set up yet (brand-new client on a fresh
+                // device): run the wizard; its saves sync through the repo.
+                if (repo.mode !== 'local' && !savedSetup) {
+                    setShowWizard(true);
+                    setHydrated(true);
+                    return;
+                }
+
+                // ?gympin=on / ?gympin=off — coach-only toggle. Applied to the
+                // loaded config and persisted, then the param is stripped.
+                const params = new URLSearchParams(window.location.search);
+                const gympinParam = params.get('gympin');
+                if (gympinParam === 'on' || gympinParam === 'off') {
+                    savedConfig = savedConfig || {};
+                    savedConfig.gympinMode = (gympinParam === 'on');
+                    repo.saveExerciseConfig(savedConfig);
+                    params.delete('gympin');
+                    const cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+                    window.history.replaceState({}, '', cleanUrl);
+                }
 
                 // Load workout history
-                const saved = storage.getItem('gymWorkoutHistory');
-                if (saved) {
-                    const history = JSON.parse(saved);
-                    setWorkoutHistory(history);
+                if (savedHistory) {
+                    setWorkoutHistory(savedHistory);
                 }
 
                 // Load workout schedule
-                const savedSchedule = storage.getItem('gymScheduleConfig');
                 if (savedSchedule) {
-                    setSchedule(JSON.parse(savedSchedule));
+                    setSchedule(savedSchedule);
                 }
 
                 // Load custom exercise configurations
-                const savedExercises = storage.getItem('gymExerciseConfig');
-                if (savedExercises) {
-                    const config = JSON.parse(savedExercises);
+                if (savedConfig) {
+                    const config = savedConfig;
 
                     // Check for version 2 format (from wizard)
                     if (config.version === 2 && config.days) {
@@ -3283,6 +3359,10 @@
                 if (lastReminder && (now - parseInt(lastReminder)) > oneMonth) {
                     setShowBackupReminder(true);
                 }
+
+                setHydrated(true);
+                });
+                });
             }, []);
 
             // Update viewing week and migrate workout history when it loads
@@ -3304,7 +3384,7 @@
 
                     if (hasChanges) {
                         setWorkoutHistory(migratedHistory);
-                        storage.setItem('gymWorkoutHistory', JSON.stringify(migratedHistory));
+                        window.repo.saveHistory(migratedHistory);
                     }
 
                     // Set viewing week to current week
@@ -3433,7 +3513,7 @@
             };
 
             const saveExerciseConfig = () => {
-                storage.setItem('gymExerciseConfig', JSON.stringify(buildExerciseConfig(exercisesByDay)));
+                window.repo.saveExerciseConfig(buildExerciseConfig(exercisesByDay));
             };
 
             const updateExerciseName = (day, exerciseId, newName, additionalProps = {}) => {
@@ -3444,7 +3524,7 @@
                             ex.id === exerciseId ? { ...ex, name: newName, ...additionalProps } : ex
                         )
                     };
-                    storage.setItem('gymExerciseConfig', JSON.stringify(buildExerciseConfig(updated)));
+                    window.repo.saveExerciseConfig(buildExerciseConfig(updated));
                     return updated;
                 });
             };
@@ -3468,7 +3548,7 @@
                         ...prev,
                         [day]: updated
                     };
-                    storage.setItem('gymExerciseConfig', JSON.stringify(buildExerciseConfig(updatedDays)));
+                    window.repo.saveExerciseConfig(buildExerciseConfig(updatedDays));
                     return updatedDays;
                 });
             };
@@ -3764,7 +3844,7 @@
                 }
 
                 setWorkoutHistory(updatedHistory);
-                storage.setItem('gymWorkoutHistory', JSON.stringify(updatedHistory));
+                window.repo.saveHistory(updatedHistory);
 
                 setLoggedExercises(prev => ({
                     ...prev,
@@ -3866,7 +3946,7 @@
                 });
 
                 setWorkoutHistory(updatedHistory);
-                storage.setItem('gymWorkoutHistory', JSON.stringify(updatedHistory));
+                window.repo.saveHistory(updatedHistory);
 
                 // Reset all log states so exercises act like a fresh day
                 setLoggedExercises({});
@@ -3884,7 +3964,7 @@
                 });
 
                 setWorkoutHistory(updatedHistory);
-                storage.setItem('gymWorkoutHistory', JSON.stringify(updatedHistory));
+                window.repo.saveHistory(updatedHistory);
                 setSuccessMessage('Workout updated!');
                 setShowSuccess(true);
                 setTimeout(() => setShowSuccess(false), 2000);
@@ -3920,16 +4000,16 @@
                         if (Array.isArray(imported)) {
                             // Old format
                             setWorkoutHistory(imported);
-                            storage.setItem('gymWorkoutHistory', JSON.stringify(imported));
+                            window.repo.saveHistory(imported);
                         } else {
                             // New format
                             if (imported.workoutHistory) {
                                 setWorkoutHistory(imported.workoutHistory);
-                                storage.setItem('gymWorkoutHistory', JSON.stringify(imported.workoutHistory));
+                                window.repo.saveHistory(imported.workoutHistory);
                             }
                             if (imported.schedule) {
                                 setSchedule(imported.schedule);
-                                storage.setItem('gymScheduleConfig', JSON.stringify(imported.schedule));
+                                window.repo.saveScheduleConfig(imported.schedule);
                             }
                             if (imported.exerciseConfig) {
                                 // Check for version 2 format
@@ -3970,7 +4050,7 @@
                                 if (imported.exerciseConfig.repsDropdown !== undefined) {
                                     setRepsDropdown(imported.exerciseConfig.repsDropdown);
                                 }
-                                storage.setItem('gymExerciseConfig', JSON.stringify(imported.exerciseConfig));
+                                window.repo.saveExerciseConfig(imported.exerciseConfig);
                             }
                         }
 
@@ -3988,10 +4068,7 @@
             const resetData = () => {
                 if (confirm('ARE YOU VERY SURE? This will delete ALL your workout data AND exercise customizations permanently. This cannot be undone!')) {
                     if (confirm('FINAL WARNING: All your progress and custom exercise names/order will be lost forever. Continue?')) {
-                        storage.removeItem('gymWorkoutHistory');
-                        storage.removeItem('gymExerciseConfig');
-                        storage.removeItem('gymScheduleConfig');
-                        storage.removeItem('gymSetupCompleted');
+                        window.repo.clearAll();
                         storage.removeItem('lastBackupReminder');
                         storage.removeItem('hasSeenTutorial');
                         // Every one-shot gate, not just the oldest one. These
@@ -4038,6 +4115,12 @@
                 storage.setItem('hasSeenTutorial', 'true');
                 setShowTutorial(false);
             };
+
+            // Storage not read yet: render nothing rather than a flash of
+            // default state (avoids acting on data that is about to change).
+            if (!hydrated) {
+                return <div className="app" />;
+            }
 
             return (
                 <div className="app">
