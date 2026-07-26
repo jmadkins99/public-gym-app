@@ -1481,7 +1481,7 @@
         // signed-out or offline-cold-cache session still has the data.
         function createFirestoreRepo(user) {
             const db = firebase.firestore();
-            const userDoc = db.collection('users').doc(user.uid);
+            const userDoc = db.collection('publicUsers').doc(user.uid);
             const workoutsCol = userDoc.collection('workouts');
             const settingsCol = userDoc.collection('settings');
 
@@ -1608,7 +1608,7 @@
         // non-fatal and retry next load (meta is only written on success).
         function migrateLocalToFirestore(user) {
             const db = firebase.firestore();
-            const userDoc = db.collection('users').doc(user.uid);
+            const userDoc = db.collection('publicUsers').doc(user.uid);
             const workoutsCol = userDoc.collection('workouts');
             const settingsCol = userDoc.collection('settings');
             const local = createLocalStorageRepo();
