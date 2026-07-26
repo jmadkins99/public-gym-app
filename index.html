@@ -1181,6 +1181,8 @@
                 'jessi': {
                     name: 'Torso - Limbs',
                     minimalistPrTracking: true,
+                    gympinMode: true,
+                    repsDropdown: { min: 5, max: 8 },
                     bypassSchedule: true,
                     workoutDays: {
 
@@ -1630,7 +1632,13 @@
                         categories: Array.from(allCategories),
                         prTracking: preset.prTracking || false,
                         advancedPrTracking: preset.advancedPrTracking || false,
-                        minimalistPrTracking: preset.minimalistPrTracking || false
+                        minimalistPrTracking: preset.minimalistPrTracking || false,
+                        // Carried from the preset so a coach-code install gets
+                        // these immediately. The one-shot enablers below only
+                        // run at mount, so without this a fresh install would
+                        // need a second load before either feature appeared.
+                        gympinMode: preset.gympinMode || false,
+                        repsDropdown: preset.repsDropdown || null
                     }));
 
                     // Wait for animation to complete, then hide and load app
@@ -2916,6 +2924,36 @@
             storage.setItem('jessiGympinEnabled', 'true');
         }
 
+        // One-shot: turn the standard card's Reps field into a 5-8 dropdown for
+        // Jessi, mirroring the personal app's 3-6 dropdown. Same Jessi-shaped
+        // signal as enableGympinForJessi, own flag so the two stay independent.
+        //
+        // The range extends one BELOW his 6-8 goal range so a set that missed
+        // the floor can be recorded; minReps is display-only and never feeds
+        // the progression logic. The top of the range is his maxReps, so the
+        // last option is exactly the getMinimalistPR trigger (reps >= 8 bumps
+        // the weight) — same relationship the personal app's 3-6 dropdown has
+        // to its own bump at 6.
+        function enableRepsDropdownForJessi() {
+            if (storage.getItem('jessiRepsDropdownEnabled') === 'true') return;
+
+            const raw = storage.getItem('gymExerciseConfig');
+            if (!raw) return;
+            let config;
+            try { config = JSON.parse(raw); } catch (e) { return; }
+
+            if (config.version !== 2 || !config.days) return;
+            const cats = (config.categories || []).map(c => String(c).toLowerCase());
+            const isAP = cats.length === 2 && cats.includes('anterior') && cats.includes('posterior');
+            const isTL = cats.length === 2 && cats.includes('torso') && cats.includes('limbs');
+            const isFB = cats.length === 1 && cats.includes('full body');
+            if (!isAP && !isTL && !isFB) return;
+
+            config.repsDropdown = { min: 5, max: 8 };
+            storage.setItem('gymExerciseConfig', JSON.stringify(config));
+            storage.setItem('jessiRepsDropdownEnabled', 'true');
+        }
+
         // ============================================================================
         // GYMPIN: Weight Breakdown
         // ============================================================================
@@ -3089,6 +3127,9 @@
             const [advancedPrTracking, setAdvancedPrTracking] = useState(false);
             const [minimalistPrTracking, setMinimalistPrTracking] = useState(false);
             const [gympinMode, setGympinMode] = useState(false);
+            // { min, max } turns the standard card's free-type Reps field into a
+            // dropdown of that inclusive range. null = free-type (everyone else).
+            const [repsDropdown, setRepsDropdown] = useState(null);
             const [expandedWeightBreakdown, setExpandedWeightBreakdown] = useState(null);
             const [selectedExercise, setSelectedExercise] = useState('');
             const [celebration, setCelebration] = useState(null);
@@ -3131,6 +3172,9 @@
 
                 // One-shot auto-enable of gympin Weight Breakdown for Jessi
                 enableGympinForJessi();
+
+                // One-shot auto-enable of the 5-8 reps dropdown for Jessi
+                enableRepsDropdownForJessi();
 
                 // Check if setup is completed
                 const setupCompleted = storage.getItem('gymSetupCompleted');
@@ -3209,6 +3253,9 @@
                         }
                         if (config.gympinMode !== undefined) {
                             setGympinMode(config.gympinMode);
+                        }
+                        if (config.repsDropdown !== undefined) {
+                            setRepsDropdown(config.repsDropdown);
                         }
                     }
                     // Fallback to old format for backward compatibility
@@ -3382,7 +3429,8 @@
                     prTracking,
                     advancedPrTracking,
                     minimalistPrTracking,
-                    gympinMode
+                    gympinMode,
+                    repsDropdown
                 };
             };
 
@@ -3488,6 +3536,20 @@
             const logExercise = (exerciseId) => {
                 const exercise = getCurrentExercises().find(e => e.id === exerciseId);
                 let data = workoutData[exerciseId] || {};
+
+                // Capture the reps dropdown's pre-selected value when the user
+                // never touched it. The <select> always displays something, but
+                // workoutData only gets a value on change — without this, a
+                // one-tap LOG fails reps validation against a visibly filled
+                // field. Runs before the weight capture below, which is gated on
+                // data.reps. No-op for the free-type input (no such <select>).
+                if (!data.reps) {
+                    const card = document.querySelector(`[data-exercise-id="${exerciseId}"]`);
+                    const repsSelect = card && card.querySelector('select[data-field="reps"]');
+                    if (repsSelect && repsSelect.value) {
+                        data = { ...data, reps: repsSelect.value };
+                    }
+                }
 
                 // Capture auto-filled weight if user didn't manually enter it
                 if ((exercise.type === 'standard' || (!exercise.type && !exercise.isCardio && exercise.typeId !== 'cardio')) && !data.weight && data.reps) {
@@ -3907,6 +3969,9 @@
                                 if (imported.exerciseConfig.gympinMode !== undefined) {
                                     setGympinMode(imported.exerciseConfig.gympinMode);
                                 }
+                                if (imported.exerciseConfig.repsDropdown !== undefined) {
+                                    setRepsDropdown(imported.exerciseConfig.repsDropdown);
+                                }
                                 storage.setItem('gymExerciseConfig', JSON.stringify(imported.exerciseConfig));
                             }
                         }
@@ -3931,7 +3996,18 @@
                         storage.removeItem('gymSetupCompleted');
                         storage.removeItem('lastBackupReminder');
                         storage.removeItem('hasSeenTutorial');
+                        // Every one-shot gate, not just the oldest one. These
+                        // self-gate on a flag, so leaving any of them set means
+                        // a post-reset install (e.g. re-entering a coach code)
+                        // silently never gets that feature back.
                         storage.removeItem('jessiAPMigrationApplied');
+                        storage.removeItem('jessiFullBodyMigrationApplied5');
+                        storage.removeItem('jessiFullBodyMigrationApplied4');
+                        storage.removeItem('jessiFullBodyMigrationApplied3');
+                        storage.removeItem('jessiFullBodyMigrationApplied2');
+                        storage.removeItem('jessiFullBodyMigrationApplied1');
+                        storage.removeItem('jessiGympinEnabled');
+                        storage.removeItem('jessiRepsDropdownEnabled');
                         setWorkoutHistory([]);
                         setWorkoutData({});
                         setLoggedExercises({});
@@ -3942,6 +4018,7 @@
                         setAdvancedPrTracking(false);
                         setMinimalistPrTracking(false);
                         setGympinMode(false);
+                        setRepsDropdown(null);
                         setShowSettings(false);
                         setShowWizard(true); // Show wizard after reset
                     }
@@ -4005,6 +4082,9 @@
                                         }
                                         if (config.gympinMode !== undefined) {
                                             setGympinMode(config.gympinMode);
+                                        }
+                                        if (config.repsDropdown !== undefined) {
+                                            setRepsDropdown(config.repsDropdown);
                                         }
                                     }
                                 }
@@ -4112,6 +4192,7 @@
                             advancedPrTracking={advancedPrTracking}
                             minimalistPrTracking={minimalistPrTracking}
                             gympinMode={gympinMode}
+                            repsDropdown={repsDropdown}
                             expandedWeightBreakdown={expandedWeightBreakdown}
                             setExpandedWeightBreakdown={setExpandedWeightBreakdown}
                             workoutHistory={workoutHistory}
@@ -4966,7 +5047,7 @@
             );
         }
 
-        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors, prTracking, advancedPrTracking, minimalistPrTracking, gympinMode, expandedWeightBreakdown, setExpandedWeightBreakdown, workoutHistory }) {
+        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors, prTracking, advancedPrTracking, minimalistPrTracking, gympinMode, repsDropdown, expandedWeightBreakdown, setExpandedWeightBreakdown, workoutHistory }) {
             const exercises = getCurrentExercises();
             const todayDay = getTodayDay();
 
@@ -5654,6 +5735,26 @@
                     return previous?.reps || '';
                 })();
 
+                // Reps dropdown (Jessi: 5-9), parity with the personal app's 3-6
+                // dropdown. Unlike the free-type field this ALWAYS has a value
+                // selected, so a one-tap LOG records it. After a weight bump the
+                // target resets to the bottom of the goal range for the new
+                // heavier load; otherwise last session's reps carry over, clamped
+                // into the dropdown range. First-ever session falls back the same
+                // way. The range bounds themselves never feed the PR logic.
+                const repsDropdownOptions = repsDropdown
+                    ? Array.from({ length: repsDropdown.max - repsDropdown.min + 1 },
+                                 (_, i) => String(repsDropdown.min + i))
+                    : null;
+                const repsDropdownDefault = (() => {
+                    if (!repsDropdown) return '';
+                    const clamp = (n) => String(Math.min(repsDropdown.max, Math.max(repsDropdown.min, n)));
+                    const fallback = clamp(exercise.minReps || repsDropdown.min);
+                    if (minimalistPR) return fallback;
+                    const prev = parseInt(previous?.reps);
+                    return isNaN(prev) ? fallback : clamp(prev);
+                })();
+
                 const stdWeightBorder = (() => {
                     if (advancedPrTracking) {
                         if (advPrWeightRecovery || advAutoRegulation) return '2px solid #4CAF50';
@@ -5868,15 +5969,29 @@
                             </div>
                             <div className="input-group">
                                 <label className="input-label">Reps on First Set</label>
-                                <input
-                                    type="number"
-                                    inputMode="numeric"
-                                    className={`input-field ${fieldErrors[`${exercise.id}-reps`] ? 'error' : ''}`}
-                                    value={data.reps || ''}
-                                    onChange={(e) => handleInputChange(exercise.id, 'reps', e.target.value)}
-                                    placeholder={placeholderReps}
-                                    disabled={isLogged}
-                                />
+                                {repsDropdownOptions ? (
+                                    <select
+                                        className={`input-field ${fieldErrors[`${exercise.id}-reps`] ? 'error' : ''}`}
+                                        data-field="reps"
+                                        value={data.reps !== undefined ? data.reps : repsDropdownDefault}
+                                        onChange={(e) => handleInputChange(exercise.id, 'reps', e.target.value)}
+                                        disabled={isLogged}
+                                    >
+                                        {repsDropdownOptions.map(r => (
+                                            <option key={r} value={r}>{r}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <input
+                                        type="number"
+                                        inputMode="numeric"
+                                        className={`input-field ${fieldErrors[`${exercise.id}-reps`] ? 'error' : ''}`}
+                                        value={data.reps || ''}
+                                        onChange={(e) => handleInputChange(exercise.id, 'reps', e.target.value)}
+                                        placeholder={placeholderReps}
+                                        disabled={isLogged}
+                                    />
+                                )}
                             </div>
                         </div>
                         <button
