@@ -1199,12 +1199,12 @@
                             exercises: [
                                 { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Recline Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Incline Chest Press', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Transverse Plane Rows', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Sagittal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
@@ -3175,6 +3175,84 @@
             storage.setItem('jessiAPMigrationApplied', 'true');
         }
 
+        // Canonical order for Jessi's 14-slot Full Body program, by display
+        // name. The single source of truth for that order: the coach preset
+        // (getPresetTemplate('jessi')) and migrateJessiToFullBody's
+        // getDesiredOrder both have to agree with it, and test 33 pins the
+        // preset and the migration to each other.
+        const JESSI_FULL_BODY_ORDER = [
+            'Chest Flies',
+            'Recline Curls',
+            'Frontal Plane Pulldowns',
+            'Incline Chest Press',
+            'Transverse Plane Rows',
+            'Kelso Shrugs',
+            'Sagittal Plane Pulldowns',
+            'Tricep Extensions',
+            'Ab Crunches',
+            'Shoulder Press',
+            'Calf Raises',
+            'Hip Adduction',
+            'Back Extensions',
+            'Leg Press',
+        ];
+
+        // Bump to push a code-side reorder out to devices that already have a
+        // saved config — including signed-in ones.
+        //
+        // Every reorder before 2026-07-26 worked by bumping a
+        // jessiFullBodyMigrationApplied<N> sentinel so migrateJessiToFullBody
+        // would re-run. That whole block sits inside `if (repo.mode ===
+        // 'local')`, added by e4aa6f8 one day after the last reorder shipped.
+        // On a signed-in device repoReady resolves to a Firestore repo on the
+        // first load, so the block never runs and the sentinel is inert. This
+        // revision counter is the replacement lever: reconcileFullBodyOrder is
+        // applied to the loaded config in BOTH modes.
+        const JESSI_ORDER_REVISION = 1;
+
+        // Reorder a loaded config to JESSI_FULL_BODY_ORDER. Pure: takes the
+        // parsed config, returns a new config to persist, or null if there is
+        // nothing to do.
+        //
+        // Scoped by exercise NAME, deliberately: it only fires when the config
+        // holds all 14 canonical names, which no other coach preset or
+        // self-setup program does. Extras the client added themselves are
+        // kept, in their existing relative order, at the bottom. Ids, weights,
+        // rep ranges and every top-level flag (gympinMode, repsDropdown, the
+        // prTracking trio) pass through untouched — workoutHistory and PR
+        // lookups key on id, never on position.
+        function reconcileFullBodyOrder(config) {
+            if (!config || config.version !== 2 || !config.days) return null;
+            if (config.orderRevision === JESSI_ORDER_REVISION) return null;
+
+            const dayKeys = Object.keys(config.days);
+            if (dayKeys.length !== 1) return null;
+            const dayKey = dayKeys[0];
+            const exercises = config.days[dayKey] || [];
+
+            const rank = new Map(JESSI_FULL_BODY_ORDER.map((n, i) => [n.toLowerCase(), i]));
+            const rankOf = (ex) => {
+                const r = rank.get(String(ex.name || '').toLowerCase());
+                return r === undefined ? JESSI_FULL_BODY_ORDER.length : r;
+            };
+
+            // Not Jessi's program unless every canonical name is present.
+            const present = new Set(exercises.map(e => String(e.name || '').toLowerCase()));
+            if (!JESSI_FULL_BODY_ORDER.every(n => present.has(n.toLowerCase()))) return null;
+
+            // Stable: unranked extras hold their relative order at the bottom.
+            const sorted = exercises
+                .map((ex, idx) => ({ ex, idx }))
+                .sort((a, b) => (rankOf(a.ex) - rankOf(b.ex)) || (a.idx - b.idx))
+                .map(({ ex }, order) => ({ ...ex, order }));
+
+            return {
+                ...config,
+                days: { ...config.days, [dayKey]: sorted },
+                orderRevision: JESSI_ORDER_REVISION,
+            };
+        }
+
         // Collapse Jessi's exerciseConfig into a single "Full Body" day. Handles
         // any of her prior shapes (Anterior/Posterior, Push/Pull/Legs, Torso/Limbs,
         // or an already-migrated Full Body that needs the flag-2 fixes).
@@ -3231,12 +3309,12 @@
                 const n = String(name || '').toLowerCase();
                 if (/chest fl/.test(n))                        return 0;
                 if (/preacher|recline/.test(n))                return 1;
-                if (/incline/.test(n))                         return 2;
-                if (/transverse|upper back row/.test(n))       return 3;
-                if (/kelso|shrug/.test(n))                     return 4;
-                if (/sagittal|seated row|hammer row/.test(n))  return 5;
-                if (/tricep pushdown|pushdown|tricep ext/.test(n)) return 6;
-                if (/frontal/.test(n))                         return 7;
+                if (/frontal/.test(n))                         return 2;
+                if (/incline/.test(n))                         return 3;
+                if (/transverse|upper back row/.test(n))       return 4;
+                if (/kelso|shrug/.test(n))                     return 5;
+                if (/sagittal|seated row|hammer row/.test(n))  return 6;
+                if (/tricep pushdown|pushdown|tricep ext/.test(n)) return 7;
                 if (/ab crunch|crunch/.test(n))                return 8;
                 if (/shoulder press/.test(n))                  return 9;
                 if (/calf/.test(n))                            return 10;
@@ -3615,6 +3693,15 @@
 
                 // Load custom exercise configurations
                 if (savedConfig) {
+                    // Apply any pending code-side reorder. Runs in BOTH modes:
+                    // on a signed-in device this is the only path that can
+                    // change the program order, since the legacy sentinel
+                    // migrations above are gated on repo.mode === 'local'.
+                    const reordered = reconcileFullBodyOrder(savedConfig);
+                    if (reordered) {
+                        savedConfig = reordered;
+                        repo.saveExerciseConfig(reordered);
+                    }
                     const config = savedConfig;
 
                     // Check for version 2 format (from wizard)
