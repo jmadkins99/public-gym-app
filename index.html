@@ -1186,27 +1186,50 @@
                 // 2d88aba, so a coach-code install rendered the old two-day
                 // split until a refresh let the migration fix it. Test 33 pins
                 // the two together by asserting a refresh changes nothing.
+                // Kept in lockstep with JESSI_UPPER_ORDER / JESSI_LOWER_ORDER
+                // and migrateJessiToUpperLower: this is the fresh-install path,
+                // those are the existing-device path, and they must produce the
+                // same program. Test 33 pins them to each other.
                 'jessi': {
-                    name: 'Full Body',
+                    name: 'Upper - Lower',
                     minimalistPrTracking: true,
                     gympinMode: true,
                     repsDropdown: { min: 5, max: 8 },
                     bypassSchedule: true,
+                    scheduleDays: JESSI_SPLIT_SCHEDULE,
+                    // Stamps the config as an already-split program, which is
+                    // what migrateJessiToUpperLower keys off. Without it a
+                    // fresh coach-code install has two days and no stamp, so
+                    // the migration reads it as "not Jessi's single Full Body
+                    // day", returns null, and every future reorder silently
+                    // skips exactly the installs that are already correct.
+                    splitRevision: JESSI_SPLIT_REVISION,
                     workoutDays: {
 
                         1: {
-                            name: 'Full Body',
+                            name: 'Upper',
                             exercises: [
                                 { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Recline Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Overhead Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Incline Chest Press', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Transverse Plane Rows', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Sagittal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Preacher Curls', id: 'actual-preacher-curls', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
+                            ]
+                        },
+
+                        2: {
+                            name: 'Lower',
+                            exercises: [
+                                { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8 },
@@ -1944,17 +1967,21 @@
                     // Auto-detect number of workout days in preset
                     const numWorkoutDays = Object.keys(preset.workoutDays).length;
 
-                    // Use custom schedule from preset, or default to Mon/Wed/Fri
-                    const weekDays = preset.schedule || ['Monday', 'Wednesday', 'Friday'];
-                    const scheduleWorkoutDays = weekDays.map((day, index) => ({
-                        dayOfWeek: day,
-                        workoutDayNumber: (index % numWorkoutDays) + 1
-                    }));
+                    // `scheduleDays` pins an exact weekday -> day-number map.
+                    // The round-robin fallback below can only produce a
+                    // strictly alternating week, which cannot express a map
+                    // like Jessi's (Sat and Sun both Upper).
+                    const scheduleWorkoutDays = preset.scheduleDays
+                        ? preset.scheduleDays.map(d => ({ ...d }))
+                        : (preset.schedule || ['Monday', 'Wednesday', 'Friday']).map((day, index) => ({
+                            dayOfWeek: day,
+                            workoutDayNumber: (index % numWorkoutDays) + 1
+                        }));
 
                     const generatedSchedule = {
                         workoutDays: scheduleWorkoutDays,
                         totalWorkoutDays: numWorkoutDays,
-                        scheduleIsExplicit: !!preset.schedule
+                        scheduleIsExplicit: !!(preset.schedule || preset.scheduleDays)
                     };
 
                     setSchedule(generatedSchedule);
@@ -1980,13 +2007,17 @@
                                 };
                             } else {
                                 return {
-                                    id: generateUUID(),
+                                    // A preset may pin a stable id so that the
+                                    // fresh-install and existing-device paths
+                                    // agree on one key for the same movement.
+                                    id: ex.id || generateUUID(),
                                     name: ex.name,
                                     category: dayData.name,
                                     typeId: 'standard',
                                     sets: ex.sets || 3,
                                     minReps: ex.minReps || 8,
                                     maxReps: ex.maxReps || 12,
+                                    ...(ex.startingWeight ? { startingWeight: ex.startingWeight } : {}),
                                     order: idx
                                 };
                             }
@@ -2019,7 +2050,11 @@
                         // run at mount, so without this a fresh install would
                         // need a second load before either feature appeared.
                         gympinMode: preset.gympinMode || false,
-                        repsDropdown: preset.repsDropdown || null
+                        repsDropdown: preset.repsDropdown || null,
+                        // Only present on presets that are a revision of a
+                        // migrated program; see the note on the jessi preset.
+                        ...(preset.splitRevision !== undefined
+                            ? { splitRevision: preset.splitRevision } : {})
                     });
 
                     // Wait for animation to complete, then hide and load app
@@ -3175,11 +3210,11 @@
             storage.setItem('jessiAPMigrationApplied', 'true');
         }
 
-        // Canonical order for Jessi's 14-slot Full Body program, by display
-        // name. The single source of truth for that order: the coach preset
-        // (getPresetTemplate('jessi')) and migrateJessiToFullBody's
-        // getDesiredOrder both have to agree with it, and test 33 pins the
-        // preset and the migration to each other.
+        // Jessi's 14-slot Full Body program, by display name. Superseded as a
+        // program by the Upper/Lower split below (Aug 2026), but still load
+        // bearing in two places: migrateJessiToFullBody still builds this
+        // roster on the local-mode path, and migrateJessiToUpperLower uses the
+        // full set as its "is this actually Jessi's program?" guard.
         const JESSI_FULL_BODY_ORDER = [
             'Chest Flies',
             'Recline Curls',
@@ -3197,59 +3232,217 @@
             'Leg Press',
         ];
 
-        // Bump to push a code-side reorder out to devices that already have a
-        // saved config — including signed-in ones.
-        //
-        // Every reorder before 2026-07-26 worked by bumping a
-        // jessiFullBodyMigrationApplied<N> sentinel so migrateJessiToFullBody
-        // would re-run. That whole block sits inside `if (repo.mode ===
-        // 'local')`, added by e4aa6f8 one day after the last reorder shipped.
-        // On a signed-in device repoReady resolves to a Firestore repo on the
-        // first load, so the block never runs and the sentinel is inert. This
-        // revision counter is the replacement lever: reconcileFullBodyOrder is
-        // applied to the loaded config in BOTH modes.
-        const JESSI_ORDER_REVISION = 1;
+        // ====================================================================
+        // JESSI: UPPER / LOWER SPLIT (August 2026)
+        // ====================================================================
+        // Mirrors the personal app's switch away from Full Body. His program
+        // becomes an exact copy of it minus Stairmaster, which his app has no
+        // exercise type for.
 
-        // Reorder a loaded config to JESSI_FULL_BODY_ORDER. Pure: takes the
-        // parsed config, returns a new config to persist, or null if there is
-        // nothing to do.
+        const JESSI_UPPER_ORDER = [
+            'Chest Flies',
+            'Recline Curls',
+            'Overhead Tricep Extensions',
+            'Lateral Raises',
+            'Frontal Plane Pulldowns',
+            'Incline Chest Press',
+            'Shoulder Press',
+            'Transverse Plane Rows',
+            'Kelso Shrugs',
+            'Sagittal Plane Pulldowns',
+            'Tricep Extensions',
+            'Preacher Curls',
+        ];
+
+        const JESSI_LOWER_ORDER = [
+            'Reverse Wrist Curls',
+            'Cable Wrist Curls',
+            'Ab Crunches',
+            'Calf Raises',
+            'Hip Adduction',
+            'Back Extensions',
+            'Leg Press',
+        ];
+
+        // Four movements the June Full Body migration dropped, now returning.
+        // Each is matched against workoutHistory by the display name it had
+        // back then so it can reclaim its ORIGINAL id. This matters: every
+        // lookup in this app is `w.exercises.find(e => e.id === exerciseId)`,
+        // so handing a returning movement a fresh id would orphan years of
+        // weights and leave the client staring at a blank card.
+        const JESSI_RESTORED = [
+            { name: 'Overhead Tricep Extensions', historical: /\bdips?\b|weighted dip|overhead tricep/i },
+            { name: 'Lateral Raises',             historical: /lateral raise/i },
+            { name: 'Reverse Wrist Curls',        historical: /reverse.*wrist/i },
+            { name: 'Cable Wrist Curls',          historical: /cable wrist/i },
+        ];
+
+        // Genuinely new. His existing "Recline Curls" IS his old Preacher
+        // Curls, renamed by the June migration, so there is no id to reclaim
+        // and no history to inherit. The id is a stable literal rather than a
+        // UUID so the coach preset and this migration agree on one key.
         //
-        // Scoped by exercise NAME, deliberately: it only fires when the config
-        // holds all 14 canonical names, which no other coach preset or
-        // self-setup program does. Extras the client added themselves are
-        // kept, in their existing relative order, at the bottom. Ids, weights,
-        // rep ranges and every top-level flag (gympinMode, repsDropdown, the
-        // prTracking trio) pass through untouched — workoutHistory and PR
-        // lookups key on id, never on position.
-        function reconcileFullBodyOrder(config) {
+        // startingWeight seeds the weight input until he logs it once. It is
+        // deliberately NOT a synthetic history entry: fabricating a workout
+        // would show up as a real session in his Weekly tab, count toward PR
+        // baselines and day totals, and sync a bogus doc to Firestore.
+        const JESSI_NEW_EXERCISES = [
+            { id: 'actual-preacher-curls', name: 'Preacher Curls', startingWeight: '50' },
+        ];
+
+        // Weekday map, mirroring the personal app: Lower on Mon/Wed/Fri, Upper
+        // on Tue/Thu/Sat and Sunday. Day 1 is Upper, matching the Upper-first
+        // ordering the personal app uses.
+        const JESSI_SPLIT_SCHEDULE = [
+            { dayOfWeek: 'Monday',    workoutDayNumber: 2 },
+            { dayOfWeek: 'Tuesday',   workoutDayNumber: 1 },
+            { dayOfWeek: 'Wednesday', workoutDayNumber: 2 },
+            { dayOfWeek: 'Thursday',  workoutDayNumber: 1 },
+            { dayOfWeek: 'Friday',    workoutDayNumber: 2 },
+            { dayOfWeek: 'Saturday',  workoutDayNumber: 1 },
+            { dayOfWeek: 'Sunday',    workoutDayNumber: 1 },
+        ];
+
+        // Bump to push any code-side change to Jessi's program — a reorder, a
+        // new movement, a dropped one — out to devices that already have a
+        // saved config, including signed-in ones. This replaced
+        // JESSI_ORDER_REVISION, which only ever understood the single Full
+        // Body day and went inert the moment the split landed.
+        //
+        // The sentinel-gated migrations (jessiFullBodyMigrationApplied<N>) all
+        // sit inside `if (repo.mode === 'local')`, so on a signed-in device
+        // they never run and bumping one is a no-op. This counter is the only
+        // path that reaches his phone.
+        const JESSI_SPLIT_REVISION = 1;
+
+        const jessiNorm = (s) => String(s || '').toLowerCase().trim();
+
+        // Recover a dropped exercise's original id from workout history, newest
+        // entry first so the most recent id wins if the movement was ever
+        // re-created. Returns null when the client has no history for it.
+        function findHistoricalExerciseId(workoutHistory, pattern) {
+            if (!Array.isArray(workoutHistory)) return null;
+            const sorted = [...workoutHistory]
+                .filter(w => w && Array.isArray(w.exercises))
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+            for (const workout of sorted) {
+                for (const ex of workout.exercises) {
+                    if (ex && ex.id && pattern.test(String(ex.name || ''))) return ex.id;
+                }
+            }
+            return null;
+        }
+
+        // Split Jessi's single Full Body day into Upper (day 1) and Lower
+        // (day 2), restoring the four dropped movements and adding Preacher
+        // Curls. Pure: returns { config, schedule, recoveredIds } to persist,
+        // or null when there is nothing to do. `schedule` is null when the
+        // caller should leave the saved schedule alone.
+        //
+        // Handles TWO entry shapes, because it has to keep working after it
+        // has already run once:
+        //
+        //   1. First run — the single Full Body day. Scoped by exercise NAME
+        //      to Jessi's program specifically: it only fires when all 14
+        //      canonical Full Body names are present, which no other coach
+        //      preset or self-setup program satisfies (graciepoo shares none
+        //      of the names; noah is already two days).
+        //   2. Re-run — a config this function itself produced, identified by
+        //      the splitRevision stamp. Re-sorts both days to the current
+        //      JESSI_*_ORDER and picks up any newly added movement. Without
+        //      this branch a bumped JESSI_SPLIT_REVISION would hit the
+        //      single-day guard and silently do nothing, leaving no lever at
+        //      all to reorder his program.
+        //
+        // Ids, weights, rep ranges and every top-level flag pass through
+        // untouched — workoutHistory and PR lookups key on id, never position.
+        function migrateJessiToUpperLower(config, workoutHistory, schedule) {
             if (!config || config.version !== 2 || !config.days) return null;
-            if (config.orderRevision === JESSI_ORDER_REVISION) return null;
+            if (config.splitRevision === JESSI_SPLIT_REVISION) return null;
 
-            const dayKeys = Object.keys(config.days);
-            if (dayKeys.length !== 1) return null;
-            const dayKey = dayKeys[0];
-            const exercises = config.days[dayKey] || [];
+            const dayKeys = Object.keys(config.days).sort((a, b) => Number(a) - Number(b));
+            const alreadySplit = config.splitRevision !== undefined;
+            let existing;
 
-            const rank = new Map(JESSI_FULL_BODY_ORDER.map((n, i) => [n.toLowerCase(), i]));
-            const rankOf = (ex) => {
-                const r = rank.get(String(ex.name || '').toLowerCase());
-                return r === undefined ? JESSI_FULL_BODY_ORDER.length : r;
-            };
+            if (alreadySplit) {
+                // Flatten both days back into one list; the take() calls below
+                // re-derive which movement belongs to which day from scratch.
+                existing = dayKeys.reduce((all, k) => all.concat(config.days[k] || []), []);
+            } else {
+                if (dayKeys.length !== 1) return null;
+                existing = config.days[dayKeys[0]] || [];
+                const present = new Set(existing.map(e => jessiNorm(e.name)));
+                if (!JESSI_FULL_BODY_ORDER.every(n => present.has(jessiNorm(n)))) return null;
+            }
 
-            // Not Jessi's program unless every canonical name is present.
-            const present = new Set(exercises.map(e => String(e.name || '').toLowerCase()));
-            if (!JESSI_FULL_BODY_ORDER.every(n => present.has(n.toLowerCase()))) return null;
+            const byName = new Map(existing.map(e => [jessiNorm(e.name), e]));
+            const recoveredIds = {};
 
-            // Stable: unranked extras hold their relative order at the bottom.
-            const sorted = exercises
-                .map((ex, idx) => ({ ex, idx }))
-                .sort((a, b) => (rankOf(a.ex) - rankOf(b.ex)) || (a.idx - b.idx))
-                .map(({ ex }, order) => ({ ...ex, order }));
+            // Bring back the four dropped movements, reusing their old ids.
+            for (const spec of JESSI_RESTORED) {
+                if (byName.has(jessiNorm(spec.name))) continue;
+                const recovered = findHistoricalExerciseId(workoutHistory, spec.historical);
+                recoveredIds[spec.name] = recovered;
+                byName.set(jessiNorm(spec.name), {
+                    id: recovered || generateUUID(),
+                    name: spec.name,
+                    typeId: 'standard',
+                    sets: 1,
+                    minReps: 6,
+                    maxReps: 8,
+                    order: 0,
+                });
+            }
+
+            // Add the genuinely new movements.
+            for (const spec of JESSI_NEW_EXERCISES) {
+                if (byName.has(jessiNorm(spec.name))) continue;
+                byName.set(jessiNorm(spec.name), {
+                    id: spec.id,
+                    name: spec.name,
+                    typeId: 'standard',
+                    sets: 1,
+                    minReps: 6,
+                    maxReps: 8,
+                    startingWeight: spec.startingWeight,
+                    order: 0,
+                });
+            }
+
+            const take = (names, category) => names
+                .map(n => byName.get(jessiNorm(n)))
+                .filter(Boolean)
+                .map((ex, order) => ({ ...ex, category, order }));
+
+            const upper = take(JESSI_UPPER_ORDER, 'Upper');
+            const lower = take(JESSI_LOWER_ORDER, 'Lower');
+
+            // Anything the client added themselves that isn't on either list.
+            // Kept rather than dropped, appended to Lower in its existing
+            // relative order — the shorter day, and never silently discarded.
+            const placed = new Set([...JESSI_UPPER_ORDER, ...JESSI_LOWER_ORDER].map(jessiNorm));
+            const extras = existing
+                .filter(e => !placed.has(jessiNorm(e.name)))
+                .map((ex, i) => ({ ...ex, category: 'Lower', order: lower.length + i }));
 
             return {
-                ...config,
-                days: { ...config.days, [dayKey]: sorted },
-                orderRevision: JESSI_ORDER_REVISION,
+                config: {
+                    ...config,
+                    days: { 1: upper, 2: lower.concat(extras) },
+                    categories: ['Upper', 'Lower'],
+                    splitRevision: JESSI_SPLIT_REVISION,
+                },
+                // Only rewrite the schedule when the split is first applied.
+                // A later revision bump is a program edit, not a calendar
+                // change, and stomping the schedule every time would undo any
+                // day the client had since moved for themselves.
+                schedule: alreadySplit ? null : {
+                    ...(schedule || {}),
+                    workoutDays: JESSI_SPLIT_SCHEDULE.map(d => ({ ...d })),
+                    totalWorkoutDays: 2,
+                    scheduleIsExplicit: true,
+                },
+                recoveredIds,
             };
         }
 
@@ -3445,8 +3638,7 @@
             if (/transverse|upper back row/.test(n))
                                                  return { type: 'plate-loaded', plateMode: 'one-sided' };
             if (/kelso|shrug/.test(n))           return { type: 'plate-loaded', plateMode: 'one-sided' };
-            if (/\bdip|weighted dip|overhead tricep/.test(n))
-                                                 return { type: 'plate-loaded', plateMode: 'two-sided' };
+            if (/shoulder press/.test(n))        return { type: 'plate-loaded', plateMode: 'two-sided' };
 
             // Pin-stack with overflow cap — cable wrist curls maxes at 97.5 then
             // accepts hanging plates one-sided.
@@ -3459,7 +3651,11 @@
             if (/frontal plane|pulldown/.test(n))                  return { type: 'pin-stack' };
             if (/seated row/.test(n))                              return { type: 'pin-stack' };
             if (/lateral raise/.test(n))                           return { type: 'pin-stack' };
-            if (/shoulder press/.test(n))                          return { type: 'pin-stack' };
+            // "Dips" / "Weighted Dips" are Jessi's historical names for the
+            // movement now called Overhead Tricep Extensions. It is a pin stack,
+            // matching the personal app; it was misclassified as plate-loaded
+            // two-sided back when the display name was still "Dips".
+            if (/\bdip|weighted dip|overhead tricep/.test(n))      return { type: 'pin-stack' };
             if (/tricep pushdown|pushdown|tricep ext/.test(n))     return { type: 'pin-stack' };
             if (/reverse.*wrist|wrist curl/.test(n))               return { type: 'pin-stack' };
             if (/ab crunch|crunch/.test(n))                        return { type: 'pin-stack' };
@@ -3693,15 +3889,23 @@
 
                 // Load custom exercise configurations
                 if (savedConfig) {
-                    // Apply any pending code-side reorder. Runs in BOTH modes:
-                    // on a signed-in device this is the only path that can
-                    // change the program order, since the legacy sentinel
-                    // migrations above are gated on repo.mode === 'local'.
-                    const reordered = reconcileFullBodyOrder(savedConfig);
-                    if (reordered) {
-                        savedConfig = reordered;
-                        repo.saveExerciseConfig(reordered);
+                    // Aug 2026: split Full Body into Upper/Lower, and apply any
+                    // later code-side reorder on top. Runs in BOTH modes: on a
+                    // signed-in device this is the only path that can change
+                    // the program, since the legacy sentinel migrations above
+                    // are gated on repo.mode === 'local'. Needs the loaded
+                    // history so returning movements reclaim their original ids.
+                    const split = migrateJessiToUpperLower(savedConfig, savedHistory, savedSchedule);
+                    if (split) {
+                        savedConfig = split.config;
+                        repo.saveExerciseConfig(split.config);
+                        if (split.schedule) {
+                            repo.saveScheduleConfig(split.schedule);
+                            setSchedule(split.schedule);
+                        }
+                        console.log('[Jessi Upper/Lower] applied; recovered ids:', split.recoveredIds);
                     }
+
                     const config = savedConfig;
 
                     // Check for version 2 format (from wizard)
@@ -3812,12 +4016,27 @@
                 }
             }, [workoutHistory.length, currentWeek]); // Run when history loads or length changes
 
-            // Set currentDay to first workout day in schedule when loaded
+            // Pick the day to open on when the schedule loads.
+            //
+            // For an EXPLICIT weekday schedule, prefer whatever today maps to,
+            // so a program like Upper on Tue/Thu/Sat actually opens on Upper
+            // on a Tuesday. The old behavior always took workoutDays[0], which
+            // meant a two-day split opened on whichever day happened to be
+            // listed first regardless of the date.
+            //
+            // Non-explicit schedules keep the first-entry behavior unchanged,
+            // as do explicit ones on a non-training day.
             useEffect(() => {
                 if (schedule && schedule.workoutDays && schedule.workoutDays.length > 0) {
-                    // Get the first workout day number from the schedule
-                    const firstWorkoutDay = schedule.workoutDays[0].workoutDayNumber;
-                    setCurrentDay(firstWorkoutDay);
+                    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday',
+                                      'Thursday', 'Friday', 'Saturday'];
+                    const todayName = dayNames[new Date().getDay()];
+                    const todayEntry = schedule.scheduleIsExplicit
+                        ? schedule.workoutDays.find(wd => wd.dayOfWeek === todayName)
+                        : null;
+                    setCurrentDay(todayEntry
+                        ? todayEntry.workoutDayNumber
+                        : schedule.workoutDays[0].workoutDayNumber);
                 }
             }, [schedule]);
 
@@ -5611,7 +5830,6 @@
 
         function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors, prTracking, advancedPrTracking, minimalistPrTracking, gympinMode, repsDropdown, expandedWeightBreakdown, setExpandedWeightBreakdown, workoutHistory }) {
             const exercises = getCurrentExercises();
-            const todayDay = getTodayDay();
 
             // Group exercises by category dynamically
             const exercisesByCategory = {};
@@ -6271,7 +6489,11 @@
                     if (minimalistPrTracking && minimalistPR) {
                         return minimalistPR.weight;
                     }
-                    return previous?.weight || '';
+                    // startingWeight seeds a brand-new exercise so the client
+                    // has a number to work from on its first session. Only
+                    // consulted when there is no history at all; once logged
+                    // once, `previous` takes over permanently.
+                    return previous?.weight || exercise.startingWeight || '';
                 })();
 
                 const placeholderReps = (() => {
@@ -6590,7 +6812,7 @@
                                     className={`day-btn ${currentDay === dayNum ? 'active' : ''}`}
                                     onClick={() => setCurrentDay(dayNum)}
                                 >
-                                    {dayName}{todayDay === dayNum ? ' (Today)' : ''}
+                                    {dayName}
                                 </button>
                             );
                         })}
