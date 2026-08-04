@@ -1234,6 +1234,7 @@
                                 { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Leg Extensions', id: 'actual-leg-extensions', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8 },
@@ -3262,6 +3263,7 @@
             'Reverse Wrist Curls',
             'Cable Wrist Curls',
             'Ab Crunches',
+            'Leg Extensions',
             'Calf Raises',
             'Hip Adduction',
             'Back Extensions',
@@ -3281,17 +3283,25 @@
             { name: 'Cable Wrist Curls',          historical: /cable wrist/i },
         ];
 
-        // Genuinely new. His existing "Recline Curls" IS his old Preacher
-        // Curls, renamed by the June migration, so there is no id to reclaim
-        // and no history to inherit. The id is a stable literal rather than a
+        // Genuinely new movements — no id to reclaim and no history to inherit,
+        // unlike JESSI_RESTORED above. Each id is a stable literal rather than a
         // UUID so the coach preset and this migration agree on one key.
+        //   - Preacher Curls: the existing "Recline Curls" IS the old Preacher
+        //     Curls, renamed by the June migration, so `preacher-curls` is spoken
+        //     for. Hence `actual-`.
+        //   - Leg Extensions: added Aug 2026, alongside the personal app, which
+        //     hit the same collision (its `leg-extensions` id renders as Hip
+        //     Adduction). Both apps share the one `actual-leg-extensions` literal.
+        //     No getWeightBreakdownConfig rule needed — its name already matches
+        //     the pin-stack branch.
         //
-        // startingWeight seeds the weight input until he logs it once. It is
+        // startingWeight seeds the weight input until it is logged once. It is
         // deliberately NOT a synthetic history entry: fabricating a workout
-        // would show up as a real session in his Weekly tab, count toward PR
+        // would show up as a real session in the Weekly tab, count toward PR
         // baselines and day totals, and sync a bogus doc to Firestore.
         const JESSI_NEW_EXERCISES = [
             { id: 'actual-preacher-curls', name: 'Preacher Curls', startingWeight: '50' },
+            { id: 'actual-leg-extensions', name: 'Leg Extensions', startingWeight: '50' },
         ];
 
         // Weekday map, mirroring the personal app: Lower on Mon/Wed/Fri, Upper
@@ -3316,8 +3326,12 @@
         // The sentinel-gated migrations (jessiFullBodyMigrationApplied<N>) all
         // sit inside `if (repo.mode === 'local')`, so on a signed-in device
         // they never run and bumping one is a no-op. This counter is the only
-        // path that reaches his phone.
-        const JESSI_SPLIT_REVISION = 1;
+        // path that reaches the client's phone.
+        //
+        // 1 = the Aug 2026 Upper/Lower split as shipped. 2 adds Leg Extensions
+        // to Lower; the re-run branch below is what picks it up on installs that
+        // already took revision 1.
+        const JESSI_SPLIT_REVISION = 2;
 
         const jessiNorm = (s) => String(s || '').toLowerCase().trim();
 
