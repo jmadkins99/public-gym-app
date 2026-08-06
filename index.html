@@ -1214,12 +1214,13 @@
                             name: 'Upper',
                             exercises: [
                                 { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Chest Press', id: 'chest-press', startingWeight: '100', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Recline Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Overhead Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Incline Chest Press', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Transverse Plane Rows', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Sagittal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
@@ -3246,12 +3247,13 @@
 
         const JESSI_UPPER_ORDER = [
             'Chest Flies',
+            'Chest Press',
             'Recline Curls',
             'Overhead Tricep Extensions',
-            'Lateral Raises',
-            'Frontal Plane Pulldowns',
             'Incline Chest Press',
+            'Lateral Raises',
             'Shoulder Press',
+            'Frontal Plane Pulldowns',
             'Transverse Plane Rows',
             'Kelso Shrugs',
             'Sagittal Plane Pulldowns',
@@ -3302,6 +3304,10 @@
         const JESSI_NEW_EXERCISES = [
             { id: 'actual-preacher-curls', name: 'Preacher Curls', startingWeight: '50' },
             { id: 'actual-leg-extensions', name: 'Leg Extensions', startingWeight: '50' },
+            // Added Aug 2026 alongside the personal app. No id collision in
+            // either app, so both share the plain `chest-press` literal — no
+            // `actual-` prefix needed. Her starting weight is 100, not his 200.
+            { id: 'chest-press', name: 'Chest Press', startingWeight: '100' },
         ];
 
         // Weekday map, mirroring the personal app: Lower on Mon/Wed/Fri, Upper
@@ -3330,8 +3336,12 @@
         //
         // 1 = the Aug 2026 Upper/Lower split as shipped. 2 adds Leg Extensions
         // to Lower; the re-run branch below is what picks it up on installs that
-        // already took revision 1.
-        const JESSI_SPLIT_REVISION = 2;
+        // already took revision 1. 3 adds Chest Press to Upper and moves Incline
+        // Chest Press up behind Overhead Tricep Extensions — the move is a pure
+        // reorder, so 3 is the only thing that carries it to an existing device.
+        // 4 moves Shoulder Press up behind Lateral Raises and makes it a pin
+        // stack, likewise reorder-only and reachable only via the bump.
+        const JESSI_SPLIT_REVISION = 4;
 
         const jessiNorm = (s) => String(s || '').toLowerCase().trim();
 
@@ -3641,10 +3651,15 @@
         function getWeightBreakdownConfig(name) {
             const n = String(name || '').toLowerCase();
 
-            // Plate-loaded — check before pin-stack so e.g. "Incline Chest Press"
-            // beats a generic "chest" rule. one-sided = plates hang on one arm,
-            // total = perSide; two-sided = plates on both arms, total = 2 * perSide.
-            if (/incline/.test(n))               return { type: 'plate-loaded', plateMode: 'two-sided' };
+            // Plate-loaded — checked before pin-stack. one-sided = plates hang
+            // on one arm, total = perSide; two-sided = plates on both arms,
+            // total = 2 * perSide.
+            //
+            // Incline Chest Press used to sit here as two-sided plate-loaded,
+            // and this block led with it so a generic chest rule couldn't steal
+            // it. Aug 2026 moved it to a pin stack in both apps, so the rule is
+            // gone and the /chest press/ pin-stack rule below now deliberately
+            // catches BOTH "Chest Press" and "Incline Chest Press".
             // Jessi's preacher station is renamed "Recline Curls" and is a pin
             // stack (see below); this plate-loaded rule is for everyone else's.
             if (/preacher/.test(n))              return { type: 'plate-loaded', plateMode: 'one-sided' };
@@ -3656,7 +3671,6 @@
             if (/transverse|upper back row/.test(n))
                                                  return { type: 'plate-loaded', plateMode: 'one-sided' };
             if (/kelso|shrug/.test(n))           return { type: 'plate-loaded', plateMode: 'one-sided' };
-            if (/shoulder press/.test(n))        return { type: 'plate-loaded', plateMode: 'two-sided' };
 
             // Pin-stack with overflow cap — cable wrist curls maxes at 97.5 then
             // accepts hanging plates one-sided.
@@ -3666,6 +3680,10 @@
             // Plain pin-stack — any other Jessi-program movement that uses a stack.
             if (/recline/.test(n))                                 return { type: 'pin-stack' };
             if (/chest fl/.test(n))                                return { type: 'pin-stack' };
+            // Matches "Chest Press" and "Incline Chest Press" alike — both are
+            // pin stacks as of Aug 2026, as is Shoulder Press.
+            if (/chest press/.test(n))                             return { type: 'pin-stack' };
+            if (/shoulder press/.test(n))                          return { type: 'pin-stack' };
             if (/frontal plane|pulldown/.test(n))                  return { type: 'pin-stack' };
             if (/seated row/.test(n))                              return { type: 'pin-stack' };
             if (/lateral raise/.test(n))                           return { type: 'pin-stack' };
