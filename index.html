@@ -14,6 +14,18 @@
          Inlined as a data URI: no extra request, nothing to cache-bust, and
          SVG stays crisp at 16px in the tab and at any size a browser asks for. -->
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='%236a5a8a'%3E%3Crect x='2' y='4' width='7.5' height='24' rx='3'/%3E%3Crect x='22.5' y='4' width='7.5' height='24' rx='3'/%3E%3Crect x='9.5' y='12.5' width='13' height='7' rx='2.5'/%3E%3C/g%3E%3C/svg%3E">
+    <!-- Local dev (python3 -m http.server) swaps the accent purple for amber, so
+         a localhost tab is never confused with the live GitHub Pages tab beside
+         it. Colour only — same mark, same 16px legibility. Rewriting the one
+         attribute keeps a single source for the shape above. Mirrors the
+         personal app; note that with both apps served locally the two amber
+         tabs are then distinguishable only by title, not by icon. -->
+    <script>
+        if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
+            var devIcon = document.querySelector("link[rel='icon']");
+            if (devIcon) devIcon.setAttribute('href', devIcon.getAttribute('href').replace('%236a5a8a', '%23ff9500'));
+        }
+    </script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
@@ -1214,10 +1226,10 @@
                             name: 'Upper',
                             exercises: [
                                 { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Chest Press', id: 'chest-press', startingWeight: '100', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Incline Chest Press', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Recline Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Overhead Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Incline Chest Press', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Chest Press', id: 'chest-press', startingWeight: '100', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
@@ -3247,10 +3259,10 @@
 
         const JESSI_UPPER_ORDER = [
             'Chest Flies',
-            'Chest Press',
+            'Incline Chest Press',
             'Recline Curls',
             'Overhead Tricep Extensions',
-            'Incline Chest Press',
+            'Chest Press',
             'Lateral Raises',
             'Shoulder Press',
             'Frontal Plane Pulldowns',
@@ -3340,8 +3352,10 @@
         // Chest Press up behind Overhead Tricep Extensions — the move is a pure
         // reorder, so 3 is the only thing that carries it to an existing device.
         // 4 moves Shoulder Press up behind Lateral Raises and makes it a pin
-        // stack, likewise reorder-only and reachable only via the bump.
-        const JESSI_SPLIT_REVISION = 4;
+        // stack, likewise reorder-only and reachable only via the bump. 5 swaps
+        // Chest Press and Incline Chest Press — same names, same count, so the
+        // bump is the whole delivery mechanism.
+        const JESSI_SPLIT_REVISION = 5;
 
         const jessiNorm = (s) => String(s || '').toLowerCase().trim();
 
