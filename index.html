@@ -1246,6 +1246,7 @@
                             exercises: [
                                 { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Leg Extensions', id: 'actual-leg-extensions', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
                                 // Keep in step with JESSI_LOWER_ORDER below —
@@ -1254,9 +1255,8 @@
                                 // the two must agree. Test 33 pins them to each
                                 // other; a reorder applied to only one fails it.
                                 { name: 'Leg Press', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
                             ]
                         }
 
@@ -3281,14 +3281,18 @@
         const JESSI_LOWER_ORDER = [
             'Reverse Wrist Curls',
             'Cable Wrist Curls',
+            // Moved up off the end of Lower to sit behind Cable Wrist Curls
+            // (Aug 2026), matching the personal app.
+            'Back Extensions',
             'Ab Crunches',
             'Leg Extensions',
             // Follows Leg Extensions as of Aug 2026, matching the personal app
             // — the two machines share a corner of the gym now.
             'Leg Press',
-            'Calf Raises',
+            // Moved ahead of Calf Raises (Aug 2026), so Lower closes on Calf
+            // Raises instead of Back Extensions. Also matches the personal app.
             'Hip Adduction',
-            'Back Extensions',
+            'Calf Raises',
         ];
 
         // Four movements the June Full Body migration dropped, now returning.
@@ -3365,8 +3369,10 @@
         // Extensions, likewise reorder-only and reachable only via the bump.
         // (The equipment reclassification that shipped with 6 needs no revision
         // at all — getWeightBreakdownConfig reads display names live on every
-        // render and never touches the saved config.)
-        const JESSI_SPLIT_REVISION = 6;
+        // render and never touches the saved config.) 7 moves Back Extensions
+        // up behind Cable Wrist Curls and Hip Adduction ahead of Calf Raises —
+        // same names, same count, so the bump is the whole delivery mechanism.
+        const JESSI_SPLIT_REVISION = 7;
 
         const jessiNorm = (s) => String(s || '').toLowerCase().trim();
 
