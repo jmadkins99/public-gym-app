@@ -23,6 +23,17 @@ Future updates will include new features, templates, and refinements based on us
 - **Backup/Restore**: Export and import your data
 - **Offline First**: All data stored locally in your browser
 - **Mobile Responsive**: Optimized layouts for phone and desktop
+- **Daily Accent Color**: The app's accent color changes once a day, cycling a bank of ten
+
+## Appearance
+
+The accent color changes once a day, the same color for everyone using the app. It is the family the whole UI hangs off — LOG buttons, active day pills, section titles, field labels, gradients, Submit Day — and it is keyed to the calendar date, so it is stable all day and flips at local midnight. There is nothing to configure and no per-user setting.
+
+Each palette holds the original purple's exact OKLCH lightness and chroma across all six shades and rotates hue only, so every color reads as equally dark and equally desaturated, and none is harder to read than the purple was. Backgrounds never change. Green PRs, gold hints and the red NA button are fixed, since they carry meaning.
+
+The order is reshuffled every cycle rather than being a fixed carousel, with two invariants: all ten appear before any repeats, and the same color never lands two days running. On localhost the UI still rotates but the favicon stays white, so a dev tab is never confused with the live one.
+
+The rotation script at the top of `index.html` is kept byte-identical to the personal app's `js/accentColor.js` so the two banks cannot drift apart. It is inlined here only because this app ships as a single file.
 
 ## How It Works
 

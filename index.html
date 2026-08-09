@@ -14,23 +14,147 @@
          Inlined as a data URI: no extra request, nothing to cache-bust, and
          SVG stays crisp at 16px in the tab and at any size a browser asks for. -->
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='%236a5a8a'%3E%3Crect x='2' y='4' width='7.5' height='24' rx='3'/%3E%3Crect x='22.5' y='4' width='7.5' height='24' rx='3'/%3E%3Crect x='9.5' y='12.5' width='13' height='7' rx='2.5'/%3E%3C/g%3E%3C/svg%3E">
-    <!-- Local dev (python3 -m http.server) swaps the accent purple for amber, so
-         a localhost tab is never confused with the live GitHub Pages tab beside
-         it. Colour only — same mark, same 16px legibility. Rewriting the one
-         attribute keeps a single source for the shape above. Mirrors the
-         personal app; note that with both apps served locally the two amber
-         tabs are then distinguishable only by title, not by icon. -->
+    <!-- Daily accent rotation. Kept byte-identical to the personal app's
+         js/accentColor.js so the two banks cannot drift; inlined here only
+         because this app ships as a single file. Must stay above the <style>
+         block and outside text/babel: Babel transforms asynchronously, so a
+         palette applied from the app script would land after first paint and
+         flash the default purple on every load. -->
     <script>
-        if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
-            var devIcon = document.querySelector("link[rel='icon']");
-            if (devIcon) devIcon.setAttribute('href', devIcon.getAttribute('href').replace('%236a5a8a', '%23ff9500'));
-        }
+        (function () {
+            'use strict';
+
+            // Six shades on one lightness ramp — deep 25.5%, accent 32.9%, hi 38.8%,
+            // soft 44.6%, muted 50.3%, pale 61.2% — each holding the original purple's
+            // exact OKLCH lightness and chroma (C 0.061-0.083) and rotating hue only.
+            // That is what makes every entry read as equally dark and equally
+            // desaturated: hues picked by eye at these lightnesses drift brighter and
+            // muddier apart from each other. It also means no palette is ever harder to
+            // read than the purple was. Violet (hue 300) is the original #3a2a5a to
+            // within a hair.
+            //
+            // The personal app references four of the six; the public app also uses
+            // `soft` (a gradient hover) and `pale` (italic hint text). Both ship all six
+            // so this module stays identical across the two repos and the banks cannot
+            // drift apart.
+            //
+            // `rgb` is the accent as a bare triple, for the one place that needs it
+            // inside an rgba() — the header's shadow.
+            var BANK = [
+                { name: 'Crimson', deep: '#3b1511', accent: '#582023', hi: '#693131', soft: '#7a4140', muted: '#8b5250', pale: '#ac726f', rgb: '88, 32, 35' },
+                { name: 'Green',   deep: '#002b18', accent: '#09411c', hi: '#1d502d', soft: '#2f613d', muted: '#40714e', pale: '#61916e', rgb: '9, 65, 28' },
+                { name: 'Sea',     deep: '#00292a', accent: '#013e3c', hi: '#02504d', soft: '#02615f', muted: '#1e726f', pale: '#489290', rgb: '1, 62, 60' },
+                { name: 'Teal',    deep: '#002832', accent: '#003d46', hi: '#004e5a', soft: '#015f6e', muted: '#216f7f', pale: '#4a8f9f', rgb: '0, 61, 70' },
+                { name: 'Steel',   deep: '#00253e', accent: '#013a53', hi: '#034b69', soft: '#1f5b7a', muted: '#336b8a', pale: '#568bab', rgb: '1, 58, 83' },
+                { name: 'Blue',    deep: '#142140', accent: '#15355f', hi: '#26456f', soft: '#375580', muted: '#486590', pale: '#6885b0', rgb: '21, 53, 95' },
+                { name: 'Indigo',  deep: '#211d3e', accent: '#2c2f5f', hi: '#3c3f6f', soft: '#4b4f7f', muted: '#5b5f8f', pale: '#7b7fb0', rgb: '44, 47, 95' },
+                { name: 'Violet',  deep: '#2b1939', accent: '#3c2959', hi: '#4c3969', soft: '#5c4979', muted: '#6c5989', pale: '#8c79a9', rgb: '60, 41, 89' },
+                { name: 'Plum',    deep: '#331630', accent: '#49254e', hi: '#59355e', soft: '#69446d', muted: '#7a557d', pale: '#9a759d', rgb: '73, 37, 78' },
+                { name: 'Orchid',  deep: '#381526', accent: '#522140', hi: '#62314e', soft: '#73415e', muted: '#84526d', pale: '#a5728d', rgb: '82, 33, 64' }
+            ];
+
+            // Days are numbered off the *local* calendar date, not Date.now()/86400000.
+            // The latter counts UTC days, which would flip the color mid-evening rather
+            // than at midnight.
+            function dayIndex(date) {
+                return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
+            }
+
+            function mulberry32(a) {
+                return function () {
+                    a |= 0; a = a + 0x6D2B79F5 | 0;
+                    var t = Math.imul(a ^ a >>> 15, 1 | a);
+                    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+                    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+                };
+            }
+
+            // Deterministic shuffle of the whole bank, one per cycle of BANK.length days.
+            // Shuffling a full permutation rather than picking at random is what
+            // guarantees you see all ten before any repeat.
+            function shuffle(cycle, n) {
+                var idx = [], rnd = mulberry32(Math.imul(cycle, 2654435761) >>> 0), i, j, t;
+                for (i = 0; i < n; i++) idx.push(i);
+                for (i = n - 1; i > 0; i--) {
+                    j = Math.floor(rnd() * (i + 1));
+                    t = idx[i]; idx[i] = idx[j]; idx[j] = t;
+                }
+                return idx;
+            }
+
+            // A plain per-cycle shuffle still lets the last color of one cycle repeat as
+            // the first of the next (~1 boundary in n). Swapping the first two entries
+            // breaks that run. Only one level of lookback is needed to be exact: for
+            // n > 2, swapping positions 0 and 1 can never change position n-1, so the
+            // previous cycle's last entry is the same whether or not it was corrected.
+            function orderForCycle(cycle, n) {
+                var idx = shuffle(cycle, n), t;
+                if (cycle > 0 && n > 2 && idx[0] === shuffle(cycle - 1, n)[n - 1]) {
+                    t = idx[0]; idx[0] = idx[1]; idx[1] = t;
+                }
+                return idx;
+            }
+
+            function paletteFor(date) {
+                var n = BANK.length, day = dayIndex(date), cycle = Math.floor(day / n);
+                return BANK[orderForCycle(cycle, n)[((day % n) + n) % n]];
+            }
+
+            function apply(palette) {
+                var s = document.documentElement.style;
+                s.setProperty('--accent', palette.accent);
+                s.setProperty('--accent-hi', palette.hi);
+                s.setProperty('--accent-soft', palette.soft);
+                s.setProperty('--accent-muted', palette.muted);
+                s.setProperty('--accent-pale', palette.pale);
+                s.setProperty('--accent-deep', palette.deep);
+                s.setProperty('--accent-rgb', palette.rgb);
+            }
+
+            apply(paletteFor(new Date()));
+
+            // Exposed for the favicon tint in index.html, and so a console poke can
+            // preview any day: window.accentColor.apply(window.accentColor.bank[3]).
+            window.accentColor = { bank: BANK, paletteFor: paletteFor, apply: apply };
+        }());
+    </script>
+    <!-- Retint the mark to match the day. Local dev (python3 -m http.server)
+         holds the favicon at white so a localhost tab is never confused with the
+         live GitHub Pages tab beside it. White is the one tint that stays
+         unambiguous now that the live favicon changes daily: it is not a hue at
+         all, so no palette can drift into looking like it. With both apps served
+         locally the two white tabs are distinguishable by title, not by icon --
+         same caveat as before. -->
+    <script>
+        (function () {
+            var icon = document.querySelector("link[rel='icon']");
+            if (!icon) return;
+            var dev = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+            var tint = dev ? '#ffffff' : (window.accentColor && window.accentColor.paletteFor(new Date()).muted);
+            if (tint) icon.setAttribute('href', icon.getAttribute('href').replace('%236a5a8a', '%23' + tint.slice(1)));
+        }());
     </script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
+        /* The accent family. The script in <head> overwrites these on <html>
+           during head parsing, one palette per calendar day. The values here are
+           the original purple, kept as the fallback for the moment before that
+           runs. Only hue rotates between palettes -- lightness and chroma are
+           fixed, so these six shades always relate to each other exactly as they
+           do here, and no palette is ever harder to read than the purple was. */
+        :root {
+            --accent: #3a2a5a;       /* LOG, active pills, gradients, toast */
+            --accent-hi: #4a3a6a;    /* active-pill border, gradient end */
+            --accent-soft: #5a4a7a;  /* gradient hover end */
+            --accent-muted: #6a5a8a; /* section titles, field labels, gear */
+            --accent-pale: #8a7aaa;  /* italic hint text */
+            --accent-deep: #2a1a3a;  /* Submit Day */
+            --accent-rgb: 58, 42, 90;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -56,8 +180,8 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            border-bottom: 1px solid #3a2a5a;
-            box-shadow: 0 4px 20px rgba(58, 42, 90, 0.2);
+            border-bottom: 1px solid var(--accent);
+            box-shadow: 0 4px 20px rgba(var(--accent-rgb), 0.2);
         }
 
         .header-top {
@@ -73,14 +197,14 @@
 
         .week-indicator {
             font-size: 14px;
-            color: #6a5a8a;
+            color: var(--accent-muted);
             margin-bottom: 15px;
         }
 
         .settings-btn {
             background: none;
             border: none;
-            color: #6a5a8a;
+            color: var(--accent-muted);
             font-size: 24px;
             cursor: pointer;
             padding: 4px;
@@ -105,8 +229,8 @@
         }
 
         .nav-btn.active {
-            background: #3a2a5a;
-            border-color: #4a3a6a;
+            background: var(--accent);
+            border-color: var(--accent-hi);
             color: #b8b8d0;
         }
 
@@ -139,8 +263,8 @@
         }
 
         .day-btn.active {
-            background: #3a2a5a;
-            border-color: #4a3a6a;
+            background: var(--accent);
+            border-color: var(--accent-hi);
             color: #b8b8d0;
         }
 
@@ -151,7 +275,7 @@
 
         .section-title {
             font-size: 14px;
-            color: #6a5a8a;
+            color: var(--accent-muted);
             text-transform: uppercase;
             letter-spacing: 1px;
             margin: 20px 0 10px 0;
@@ -167,7 +291,7 @@
         }
 
         .exercise-card.logged {
-            border-color: #3a2a5a;
+            border-color: var(--accent);
             background: #12121f;
         }
 
@@ -224,7 +348,7 @@
 
         .input-field:focus {
             outline: none;
-            border-color: #3a2a5a;
+            border-color: var(--accent);
         }
 
         .input-field:disabled {
@@ -234,7 +358,7 @@
         .log-btn {
             width: 100%;
             padding: 12px;
-            background: #3a2a5a;
+            background: var(--accent);
             border: none;
             border-radius: 8px;
             color: #b8b8d0;
@@ -250,13 +374,13 @@
 
         .log-btn.logged {
             background: #1a1a2a;
-            color: #6a5a8a;
+            color: var(--accent-muted);
         }
 
         .save-btn {
             width: 100%;
             padding: 16px;
-            background: #2a1a3a;
+            background: var(--accent-deep);
             border: none;
             border-radius: 12px;
             color: #b8b8d0;
@@ -334,7 +458,7 @@
         }
 
         .history-exercise-name {
-            color: #6a5a8a;
+            color: var(--accent-muted);
         }
 
         .history-exercise-data {
@@ -371,7 +495,7 @@
             top: 80px;
             left: 50%;
             transform: translateX(-50%);
-            background: #3a2a5a;
+            background: var(--accent);
             color: #b8b8d0;
             padding: 12px 24px;
             border-radius: 8px;
@@ -448,7 +572,7 @@
 
         .pr-suggestion {
             font-size: 11px;
-            color: #6a5a8a;
+            color: var(--accent-muted);
             margin-bottom: 4px;
             font-weight: 600;
             height: 16px;
@@ -513,8 +637,8 @@
         }
 
         .modal-btn.primary {
-            background: #3a2a5a;
-            border-color: #3a2a5a;
+            background: var(--accent);
+            border-color: var(--accent);
             color: #b8b8d0;
         }
 
@@ -565,7 +689,7 @@
 
         .wizard-subtitle {
             font-size: 16px;
-            color: #6a5a8a;
+            color: var(--accent-muted);
         }
 
         .wizard-progress {
@@ -584,7 +708,7 @@
         }
 
         .wizard-progress-dot.active {
-            background: #3a2a5a;
+            background: var(--accent);
             width: 40px;
             border-radius: 6px;
         }
@@ -617,13 +741,13 @@
         }
 
         .template-card:hover {
-            border-color: #3a2a5a;
+            border-color: var(--accent);
             background: #1f1f2f;
         }
 
         .template-card.selected {
-            border-color: #3a2a5a;
-            background: #2a1a3a;
+            border-color: var(--accent);
+            background: var(--accent-deep);
         }
 
         .template-card-header {
@@ -642,7 +766,7 @@
         .template-badge {
             font-size: 12px;
             padding: 4px 8px;
-            background: #3a2a5a;
+            background: var(--accent);
             border-radius: 4px;
             color: #b8b8d0;
         }
@@ -675,17 +799,17 @@
         }
 
         .calendar-day:hover {
-            border-color: #3a2a5a;
+            border-color: var(--accent);
         }
 
         .calendar-day.active {
-            border-color: #3a2a5a;
-            background: #2a1a3a;
+            border-color: var(--accent);
+            background: var(--accent-deep);
         }
 
         .calendar-day-name {
             font-size: 12px;
-            color: #6a5a8a;
+            color: var(--accent-muted);
             margin-bottom: 4px;
         }
 
@@ -696,7 +820,7 @@
         }
 
         .calendar-day.rest .calendar-day-number {
-            color: #6a5a8a;
+            color: var(--accent-muted);
         }
 
         /* Mobile responsive calendar - 2 rows */
@@ -749,7 +873,7 @@
         .wizard-btn {
             flex: 1;
             padding: 16px;
-            background: #2a1a3a;
+            background: var(--accent-deep);
             border: none;
             border-radius: 12px;
             color: #b8b8d0;
@@ -760,7 +884,7 @@
         }
 
         .wizard-btn:hover {
-            background: #3a2a5a;
+            background: var(--accent);
         }
 
         .wizard-btn:active {
@@ -792,7 +916,7 @@
 
         .exercise-preview-title {
             font-size: 14px;
-            color: #6a5a8a;
+            color: var(--accent-muted);
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 12px;
@@ -822,7 +946,7 @@
 
         .summary-label {
             font-size: 12px;
-            color: #6a5a8a;
+            color: var(--accent-muted);
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 8px;
@@ -914,7 +1038,7 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #6a5a8a 0%, #8a7aaa 100%);
+            background: linear-gradient(135deg, var(--accent-muted) 0%, var(--accent-pale) 100%);
             animation: pulse 1.4s ease-in-out infinite;
         }
 
@@ -1902,8 +2026,8 @@
                             <svg className="circular-loader" viewBox="0 0 200 200">
                                 <defs>
                                     <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" style={{ stopColor: '#8a7aaa', stopOpacity: 1 }} />
-                                        <stop offset="100%" style={{ stopColor: '#6a5a8a', stopOpacity: 1 }} />
+                                        <stop offset="0%" style={{ stopColor: 'var(--accent-pale)', stopOpacity: 1 }} />
+                                        <stop offset="100%" style={{ stopColor: 'var(--accent-muted)', stopOpacity: 1 }} />
                                     </linearGradient>
                                     <filter id="glow">
                                         <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
@@ -2378,7 +2502,7 @@
                                 <>
                                     {presetTemplate.name}
                                     <br />
-                                    <span style={{ fontSize: '14px', color: '#6a5a8a' }}>{maxDays}-day Split</span>
+                                    <span style={{ fontSize: '14px', color: 'var(--accent-muted)' }}>{maxDays}-day Split</span>
                                 </>
                             ) : (
                                 'Which days will you work out?'
@@ -2612,8 +2736,8 @@
                             <button
                                 onClick={() => setShowExample(true)}
                                 style={{
-                                    background: 'linear-gradient(135deg, #3a2a5a, #4a3a6a)',
-                                    border: '2px solid #5a4a7a',
+                                    background: 'linear-gradient(135deg, var(--accent), var(--accent-hi))',
+                                    border: '2px solid var(--accent-soft)',
                                     borderRadius: '50%',
                                     width: '32px',
                                     height: '32px',
@@ -2624,15 +2748,15 @@
                                     fontSize: '18px',
                                     color: '#b8b8d0',
                                     fontWeight: 'bold',
-                                    boxShadow: '0 2px 8px rgba(58, 42, 90, 0.4)',
+                                    boxShadow: '0 2px 8px rgba(var(--accent-rgb), 0.4)',
                                     transition: 'all 0.2s ease'
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.target.style.background = 'linear-gradient(135deg, #4a3a6a, #5a4a7a)';
+                                    e.target.style.background = 'linear-gradient(135deg, var(--accent-hi), var(--accent-soft))';
                                     e.target.style.transform = 'scale(1.05)';
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.target.style.background = 'linear-gradient(135deg, #3a2a5a, #4a3a6a)';
+                                    e.target.style.background = 'linear-gradient(135deg, var(--accent), var(--accent-hi))';
                                     e.target.style.transform = 'scale(1)';
                                 }}
                                 title="Show example"
@@ -2666,8 +2790,8 @@
                                                     flex: 1,
                                                     minWidth: '100px',
                                                     padding: '12px',
-                                                    background: selectedDay === dayNum ? '#3a2a5a' : '#1a1a2a',
-                                                    border: `2px solid ${selectedDay === dayNum ? '#4a3a6a' : '#2a2a3a'}`,
+                                                    background: selectedDay === dayNum ? 'var(--accent)' : '#1a1a2a',
+                                                    border: `2px solid ${selectedDay === dayNum ? 'var(--accent-hi)' : '#2a2a3a'}`,
                                                     borderRadius: '8px',
                                                     color: '#b8b8d0',
                                                     fontSize: '14px',
@@ -2684,7 +2808,7 @@
                                 {/* Day name input */}
                                 {currentDay && (
                                     <div style={{ marginBottom: '20px' }}>
-                                        <label style={{ display: 'block', fontSize: '12px', color: '#6a5a8a', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--accent-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                             Name this day (e.g., "Push", "Upper", "Chest & Back")
                                         </label>
                                         <input
@@ -2701,13 +2825,13 @@
                                 {/* Exercise list */}
                                 {currentDay && (
                                     <div style={{ marginBottom: '20px' }}>
-                                        <div style={{ fontSize: '12px', color: '#6a5a8a', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                        <div style={{ fontSize: '12px', color: 'var(--accent-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                             Exercises ({currentDay.exercises.length})
                                         </div>
                                         {/* Column headers */}
                                         {currentDay.exercises.length > 0 && (
                                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '6px 8px', marginBottom: '6px' }}>
-                                                <span style={{ minWidth: '160px', flex: '0 0 auto', fontSize: '11px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Exercise Name</span>
+                                                <span style={{ minWidth: '160px', flex: '0 0 auto', fontSize: '11px', color: 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Exercise Name</span>
                                             </div>
                                         )}
                                         <div style={{ background: '#1a1a2a', borderRadius: '8px', padding: '12px', minHeight: '100px' }}>
@@ -2764,7 +2888,7 @@
                                                         {ex.isCardio ? (
                                                             <>
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                                    <span style={{ fontSize: '10px', color: validationErrors[`${selectedDay}-${idx}-intensity`] ? '#ff5555' : '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Intensity</span>
+                                                                    <span style={{ fontSize: '10px', color: validationErrors[`${selectedDay}-${idx}-intensity`] ? '#ff5555' : 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Intensity</span>
                                                                     <input
                                                                         type="text"
                                                                         value={ex.intensity || ''}
@@ -2793,7 +2917,7 @@
                                                                     />
                                                                 </div>
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                                    <span style={{ fontSize: '10px', color: validationErrors[`${selectedDay}-${idx}-minutes`] ? '#ff5555' : '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Minutes</span>
+                                                                    <span style={{ fontSize: '10px', color: validationErrors[`${selectedDay}-${idx}-minutes`] ? '#ff5555' : 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Minutes</span>
                                                                     <input
                                                                         type="number"
                                                                         value={ex.minutes === '' ? '' : (ex.minutes || 0)}
@@ -2823,7 +2947,7 @@
                                                                     />
                                                                 </div>
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                                    <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Seconds</span>
+                                                                    <span style={{ fontSize: '10px', color: 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Seconds</span>
                                                                     <input
                                                                         type="number"
                                                                         value={ex.seconds === '' ? '' : (ex.seconds || 0)}
@@ -2849,7 +2973,7 @@
                                                         ) : (
                                                             <>
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                                    <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Sets</span>
+                                                                    <span style={{ fontSize: '10px', color: 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Sets</span>
                                                                     <input
                                                                         type="number"
                                                                         value={ex.sets === '' ? '' : (ex.sets || 3)}
@@ -2870,7 +2994,7 @@
                                                                     />
                                                                 </div>
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                                    <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Min</span>
+                                                                    <span style={{ fontSize: '10px', color: 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Min</span>
                                                                     <input
                                                                         type="number"
                                                                         value={ex.minReps === '' ? '' : (ex.minReps || 8)}
@@ -2890,9 +3014,9 @@
                                                                         title="Minimum Reps"
                                                                     />
                                                                 </div>
-                                                                <span style={{ color: '#6a5a8a', paddingBottom: '6px' }}>-</span>
+                                                                <span style={{ color: 'var(--accent-muted)', paddingBottom: '6px' }}>-</span>
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                                    <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Max</span>
+                                                                    <span style={{ fontSize: '10px', color: 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Max</span>
                                                                     <input
                                                                         type="number"
                                                                         value={ex.maxReps === '' ? '' : (ex.maxReps || 12)}
@@ -2924,7 +3048,7 @@
                                 {/* Exercise input with dropdown */}
                                 {currentDay && (
                                     <div style={{ marginBottom: '20px' }}>
-                                        <label style={{ display: 'block', fontSize: '12px', color: '#6a5a8a', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--accent-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                             Add Exercise
                                         </label>
                                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -2976,7 +3100,7 @@
                                     </p>
 
                                     <div style={{ background: '#1a1a2a', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
-                                        <label style={{ display: 'block', fontSize: '12px', color: '#6a5a8a', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--accent-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                             Name this day (e.g., "Push", "Upper", "Chest & Back")
                                         </label>
                                         <div style={{ padding: '12px', background: '#0d0d1a', border: '1px solid #2a2a3a', borderRadius: '4px', color: '#b8b8d0', fontWeight: 600 }}>
@@ -2985,22 +3109,22 @@
                                     </div>
 
                                     <div style={{ background: '#1a1a2a', borderRadius: '8px', padding: '16px' }}>
-                                        <div style={{ fontSize: '12px', color: '#6a5a8a', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                        <div style={{ fontSize: '12px', color: 'var(--accent-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                             Exercises (1)
                                         </div>
                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '6px 8px', marginBottom: '6px' }}>
-                                            <span style={{ minWidth: '160px', flex: '0 0 auto', fontSize: '11px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Exercise Name</span>
-                                            <span style={{ width: '60px', fontSize: '11px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Sets</span>
-                                            <span style={{ width: '60px', fontSize: '11px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Min</span>
+                                            <span style={{ minWidth: '160px', flex: '0 0 auto', fontSize: '11px', color: 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Exercise Name</span>
+                                            <span style={{ width: '60px', fontSize: '11px', color: 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Sets</span>
+                                            <span style={{ width: '60px', fontSize: '11px', color: 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Min</span>
                                             <span style={{ width: '10px' }}></span>
-                                            <span style={{ width: '60px', fontSize: '11px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Max</span>
+                                            <span style={{ width: '60px', fontSize: '11px', color: 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Max</span>
                                         </div>
                                         <div style={{ background: '#0d0d1a', borderRadius: '4px', padding: '12px' }}>
                                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '8px', background: '#050510', borderRadius: '4px' }}>
                                                 <span style={{ color: '#b8b8d0', minWidth: '160px', flex: '0 0 auto', fontWeight: 600 }}>1. Bench Press</span>
                                                 <div style={{ width: '60px', padding: '6px', background: '#1a1a2a', border: '1px solid #2a2a3a', borderRadius: '4px', color: '#b8b8d0', fontSize: '14px', textAlign: 'center', fontWeight: 600 }}>3</div>
                                                 <div style={{ width: '60px', padding: '6px', background: '#1a1a2a', border: '1px solid #2a2a3a', borderRadius: '4px', color: '#b8b8d0', fontSize: '14px', textAlign: 'center', fontWeight: 600 }}>8</div>
-                                                <span style={{ color: '#6a5a8a' }}>-</span>
+                                                <span style={{ color: 'var(--accent-muted)' }}>-</span>
                                                 <div style={{ width: '60px', padding: '6px', background: '#1a1a2a', border: '1px solid #2a2a3a', borderRadius: '4px', color: '#b8b8d0', fontSize: '14px', textAlign: 'center', fontWeight: 600 }}>12</div>
                                             </div>
                                         </div>
@@ -3074,7 +3198,7 @@
                             <div className="summary-value">{totalExercises} exercises</div>
                         </div>
 
-                        <div style={{ fontSize: '14px', color: '#6a5a8a', marginTop: '20px', lineHeight: '1.6' }}>
+                        <div style={{ fontSize: '14px', color: 'var(--accent-muted)', marginTop: '20px', lineHeight: '1.6' }}>
                             You can customize exercise order and exercise names anytime in Settings ⚙️
                         </div>
                     </div>
@@ -4896,7 +5020,7 @@
                     {showSyncPrompt && !showWizard && (
                         <div style={{
                             background: '#1a1a2a',
-                            border: '1px solid #3a2a5a',
+                            border: '1px solid var(--accent)',
                             borderRadius: '8px',
                             padding: '10px 12px',
                             margin: '10px',
@@ -4909,7 +5033,7 @@
                             <button
                                 onClick={() => window.repoSignIn()}
                                 style={{
-                                    padding: '6px 10px', background: '#3a2a5a', border: 'none',
+                                    padding: '6px 10px', background: 'var(--accent)', border: 'none',
                                     borderRadius: '4px', color: '#b8b8d0', cursor: 'pointer'
                                 }}
                             >
@@ -5090,7 +5214,7 @@
                         <div style={{ marginBottom: '25px', padding: '20px', background: '#1a1a2a', borderRadius: '12px', border: '2px solid #2a2a3a' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                                 <div style={{
-                                    background: 'linear-gradient(135deg, #3a2a5a, #4a3a6a)',
+                                    background: 'linear-gradient(135deg, var(--accent), var(--accent-hi))',
                                     borderRadius: '50%',
                                     width: '32px',
                                     height: '32px',
@@ -5112,7 +5236,7 @@
                         <div style={{ marginBottom: '25px', padding: '20px', background: '#1a1a2a', borderRadius: '12px', border: '2px solid #2a2a3a' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                                 <div style={{
-                                    background: 'linear-gradient(135deg, #3a2a5a, #4a3a6a)',
+                                    background: 'linear-gradient(135deg, var(--accent), var(--accent-hi))',
                                     borderRadius: '50%',
                                     width: '32px',
                                     height: '32px',
@@ -5127,7 +5251,7 @@
                             </div>
                             <div style={{ color: '#8a8aa0', fontSize: '14px', lineHeight: '1.5', paddingLeft: '44px' }}>
                                 Press the <strong style={{ color: '#b8b8d0' }}>LOG</strong> button for each exercise to save your set.
-                                <div style={{ marginTop: '8px', fontSize: '12px', color: '#6a5a8a' }}>
+                                <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--accent-muted)' }}>
                                     ↳ The button will show <span style={{ color: '#8aaa8a' }}>✓ Logged</span> when saved
                                 </div>
                             </div>
@@ -5137,7 +5261,7 @@
                         <div style={{ marginBottom: '25px', padding: '20px', background: '#1a1a2a', borderRadius: '12px', border: '2px solid #2a2a3a' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                                 <div style={{
-                                    background: 'linear-gradient(135deg, #3a2a5a, #4a3a6a)',
+                                    background: 'linear-gradient(135deg, var(--accent), var(--accent-hi))',
                                     borderRadius: '50%',
                                     width: '32px',
                                     height: '32px',
@@ -5152,7 +5276,7 @@
                             </div>
                             <div style={{ color: '#8a8aa0', fontSize: '14px', lineHeight: '1.5', paddingLeft: '44px' }}>
                                 When you're done logging all exercises, tap <strong style={{ color: '#b8b8d0' }}>Submit Day and View Breakdown</strong> at the bottom.
-                                <div style={{ marginTop: '8px', fontSize: '12px', color: '#6a5a8a' }}>
+                                <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--accent-muted)' }}>
                                     ↳ This submits your workout for the day and shows your progress summary
                                 </div>
                             </div>
@@ -5227,7 +5351,7 @@
                                     }}>
                                         {editingExercise === exercise.id ? (
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '11px', color: '#6a5a8a', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--accent-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                                     Exercise Name
                                                 </label>
                                                 <input
@@ -5238,7 +5362,7 @@
                                                         width: '100%',
                                                         padding: '8px',
                                                         background: '#0d0d1a',
-                                                        border: '1px solid #3a2a5a',
+                                                        border: '1px solid var(--accent)',
                                                         borderRadius: '4px',
                                                         color: '#b8b8d0',
                                                         marginBottom: '12px',
@@ -5248,12 +5372,12 @@
                                                 />
                                                 {!exercise.isCardio && !exercise.type?.includes('bike') && !exercise.type?.includes('stairmaster') && exercise.type !== 'cardio' && exercise.typeId !== 'cardio' && (
                                                     <>
-                                                        <label style={{ display: 'block', fontSize: '11px', color: '#6a5a8a', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--accent-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                                             Sets & Rep Range Goal
                                                         </label>
                                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
                                                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                                <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Sets</span>
+                                                                <span style={{ fontSize: '10px', color: 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Sets</span>
                                                                 <input
                                                                     type="number"
                                                                     value={tempSets}
@@ -5273,7 +5397,7 @@
                                                                 />
                                                             </div>
                                                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                                <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Min Reps</span>
+                                                                <span style={{ fontSize: '10px', color: 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Min Reps</span>
                                                                 <input
                                                                     type="number"
                                                                     value={tempMinReps}
@@ -5292,9 +5416,9 @@
                                                                     }}
                                                                 />
                                                             </div>
-                                                            <span style={{ color: '#6a5a8a', paddingTop: '20px' }}>-</span>
+                                                            <span style={{ color: 'var(--accent-muted)', paddingTop: '20px' }}>-</span>
                                                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                                <span style={{ fontSize: '10px', color: '#6a5a8a', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Max Reps</span>
+                                                                <span style={{ fontSize: '10px', color: 'var(--accent-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Max Reps</span>
                                                                 <input
                                                                     type="number"
                                                                     value={tempMaxReps}
@@ -5322,7 +5446,7 @@
                                                         style={{
                                                             flex: 1,
                                                             padding: '8px',
-                                                            background: '#3a2a5a',
+                                                            background: 'var(--accent)',
                                                             border: 'none',
                                                             borderRadius: '4px',
                                                             color: '#b8b8d0',
@@ -5559,7 +5683,7 @@
                                                     flex: 1,
                                                     padding: '8px',
                                                     background: '#0d0d1a',
-                                                    border: '1px solid #3a2a5a',
+                                                    border: '1px solid var(--accent)',
                                                     borderRadius: '4px',
                                                     color: '#b8b8d0'
                                                 }}
@@ -5574,7 +5698,7 @@
                                                     flex: 1,
                                                     padding: '8px',
                                                     background: '#0d0d1a',
-                                                    border: '1px solid #3a2a5a',
+                                                    border: '1px solid var(--accent)',
                                                     borderRadius: '4px',
                                                     color: '#b8b8d0'
                                                 }}
@@ -5591,7 +5715,7 @@
                                                     flex: 1,
                                                     padding: '8px',
                                                     background: '#0d0d1a',
-                                                    border: '1px solid #3a2a5a',
+                                                    border: '1px solid var(--accent)',
                                                     borderRadius: '4px',
                                                     color: '#b8b8d0'
                                                 }}
@@ -5620,7 +5744,7 @@
                                                 style={{
                                                     padding: '8px',
                                                     background: '#0d0d1a',
-                                                    border: '1px solid #3a2a5a',
+                                                    border: '1px solid var(--accent)',
                                                     borderRadius: '4px',
                                                     color: '#b8b8d0'
                                                 }}
@@ -5636,13 +5760,13 @@
                                                         flex: 1,
                                                         padding: '8px',
                                                         background: '#0d0d1a',
-                                                        border: '1px solid #3a2a5a',
+                                                        border: '1px solid var(--accent)',
                                                         borderRadius: '4px',
                                                         color: '#b8b8d0',
                                                         textAlign: 'center'
                                                     }}
                                                 />
-                                                <span style={{ color: '#6a5a8a', alignSelf: 'center' }}>:</span>
+                                                <span style={{ color: 'var(--accent-muted)', alignSelf: 'center' }}>:</span>
                                                 <input
                                                     type="number"
                                                     placeholder="Seconds"
@@ -5654,7 +5778,7 @@
                                                         flex: 1,
                                                         padding: '8px',
                                                         background: '#0d0d1a',
-                                                        border: '1px solid #3a2a5a',
+                                                        border: '1px solid var(--accent)',
                                                         borderRadius: '4px',
                                                         color: '#b8b8d0',
                                                         textAlign: 'center'
@@ -5686,7 +5810,7 @@
                                                     flex: 1,
                                                     padding: '8px',
                                                     background: '#0d0d1a',
-                                                    border: '1px solid #3a2a5a',
+                                                    border: '1px solid var(--accent)',
                                                     borderRadius: '4px',
                                                     color: '#b8b8d0'
                                                 }}
@@ -5703,7 +5827,7 @@
                                                     flex: 1,
                                                     padding: '8px',
                                                     background: '#0d0d1a',
-                                                    border: '1px solid #3a2a5a',
+                                                    border: '1px solid var(--accent)',
                                                     borderRadius: '4px',
                                                     color: '#b8b8d0'
                                                 }}
@@ -5717,7 +5841,7 @@
                                                     flex: 1,
                                                     padding: '8px',
                                                     background: '#0d0d1a',
-                                                    border: '1px solid #3a2a5a',
+                                                    border: '1px solid var(--accent)',
                                                     borderRadius: '4px',
                                                     color: '#b8b8d0'
                                                 }}
@@ -5890,7 +6014,7 @@
                             <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '10px' }}>
                                 Exercises Completed
                             </div>
-                            <div style={{ fontSize: '32px', fontWeight: '700', color: '#3a2a5a' }}>
+                            <div style={{ fontSize: '32px', fontWeight: '700', color: 'var(--accent)' }}>
                                 {completedCount} / {totalCount}
                             </div>
                         </div>
@@ -6252,7 +6376,7 @@
                                         {exercise.name}
                                     </div>
                                     {(exercise.sets || exercise.minReps || exercise.maxReps) && (
-                                        <div style={{ fontSize: '12px', color: '#8a7aaa', marginTop: '4px', fontStyle: 'italic' }}>
+                                        <div style={{ fontSize: '12px', color: 'var(--accent-pale)', marginTop: '4px', fontStyle: 'italic' }}>
                                             Goal: {exercise.sets || 3} sets × {exercise.minReps || 8}-{exercise.maxReps || 12} reps
                                         </div>
                                     )}
@@ -6331,7 +6455,7 @@
                                         {exercise.name}
                                     </div>
                                     {(exercise.sets || exercise.minReps || exercise.maxReps) && (
-                                        <div style={{ fontSize: '12px', color: '#8a7aaa', marginTop: '4px', fontStyle: 'italic' }}>
+                                        <div style={{ fontSize: '12px', color: 'var(--accent-pale)', marginTop: '4px', fontStyle: 'italic' }}>
                                             Goal: {exercise.sets || 3} sets × {exercise.minReps || 8}-{exercise.maxReps || 12} reps
                                         </div>
                                     )}
@@ -6411,7 +6535,7 @@
                                 <div>
                                     <div className="exercise-name">{exercise.name}</div>
                                     {(exercise.sets || exercise.minReps || exercise.maxReps) && (
-                                        <div style={{ fontSize: '12px', color: '#8a7aaa', marginTop: '4px', fontStyle: 'italic' }}>
+                                        <div style={{ fontSize: '12px', color: 'var(--accent-pale)', marginTop: '4px', fontStyle: 'italic' }}>
                                             Goal: {exercise.sets || 3} sets × {exercise.minReps || 8}-{exercise.maxReps || 12} reps
                                         </div>
                                     )}
@@ -6491,12 +6615,12 @@
                                         {exercise.name}
                                     </div>
                                     {previous && (
-                                        <div style={{ fontSize: '12px', color: '#8a7aaa', marginTop: '4px', fontStyle: 'italic' }}>
+                                        <div style={{ fontSize: '12px', color: 'var(--accent-pale)', marginTop: '4px', fontStyle: 'italic' }}>
                                             Goal: {previous.intensity || 'Any intensity'} - {previous.minutes || 0}:{String(previous.seconds || 0).padStart(2, '0')}
                                         </div>
                                     )}
                                     {!previous && (exercise.intensity !== undefined || exercise.minutes !== undefined) && (
-                                        <div style={{ fontSize: '12px', color: '#8a7aaa', marginTop: '4px', fontStyle: 'italic' }}>
+                                        <div style={{ fontSize: '12px', color: 'var(--accent-pale)', marginTop: '4px', fontStyle: 'italic' }}>
                                             Goal: {exercise.intensity || 'Any intensity'} - {exercise.minutes || 0}:{String(exercise.seconds || 0).padStart(2, '0')}
                                         </div>
                                     )}
@@ -6637,7 +6761,7 @@
                                     {exercise.name}
                                 </div>
                                 {(exercise.sets || exercise.minReps || exercise.maxReps) && (
-                                    <div style={{ fontSize: '12px', color: '#8a7aaa', marginTop: '4px', fontStyle: 'italic' }}>
+                                    <div style={{ fontSize: '12px', color: 'var(--accent-pale)', marginTop: '4px', fontStyle: 'italic' }}>
                                         Goal: {exercise.sets || 3} sets × {exercise.minReps || 8}-{exercise.maxReps || 12} reps
                                     </div>
                                 )}
@@ -6655,7 +6779,7 @@
                                         padding: '6px 12px',
                                         fontSize: '12px',
                                         fontWeight: '600',
-                                        backgroundColor: '#3a2a5a',
+                                        backgroundColor: 'var(--accent)',
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '6px',
@@ -6976,7 +7100,7 @@
                                                 style={{
                                                     background: 'none',
                                                     border: 'none',
-                                                    color: '#6a5a8a',
+                                                    color: 'var(--accent-muted)',
                                                     cursor: 'pointer',
                                                     fontSize: '18px',
                                                     padding: '4px 8px'
