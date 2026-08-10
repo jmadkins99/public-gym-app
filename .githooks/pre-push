@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Pre-push hook for public_gym_app: runs the gym_app integration test
-# suite (which covers BOTH apps) before allowing a push.
+# Pre-push hook for public-gym-app: runs the personal repo's integration
+# test suite (which covers BOTH apps) before allowing a push.
 # Blocks the push on any test failure.
 #
 # Bypass in emergencies with: git push --no-verify
@@ -8,24 +8,48 @@
 # To enable this hook after cloning:
 #   git config core.hooksPath .githooks
 #
-# Assumes ../gym_app/tests/ exists (the test suite lives there and tests
-# both apps). If the sibling repo isn't checked out, the hook skips
-# instead of failing — that's the right call for someone who only has
-# public_gym_app cloned.
+# The suite lives in the sibling personal repo, whose directory name is not
+# stable across machines — the GitHub repo is `gym-tracker`, but older local
+# checkouts used `gym_app`. Try each. If none is checked out the hook skips
+# rather than failing, which is the right call for someone who only cloned
+# public-gym-app.
+#
+# Skipping is silent-ish by design but easy to misread as "tests passed":
+# the echo below names every path tried, so a skip is never mistaken for a
+# green run. This hook pointed at `gym_app` alone until Aug 2026 and skipped
+# every push on a machine using the hyphenated clone name.
 
 set -e
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
-SIBLING_TESTS_DIR="$REPO_ROOT/../gym_app/tests"
+PARENT="$(cd "$REPO_ROOT/.." && pwd)"
 
-if [ ! -d "$SIBLING_TESTS_DIR" ]; then
-    echo "pre-push: sibling gym_app/tests/ not found — skipping"
+CANDIDATES=(
+    "$PARENT/gym-tracker/tests"
+    "$PARENT/gym_app/tests"
+    "$PARENT/gym-app/tests"
+)
+
+TESTS_DIR=""
+for dir in "${CANDIDATES[@]}"; do
+    if [ -f "$dir/run.sh" ]; then
+        TESTS_DIR="$dir"
+        break
+    fi
+done
+
+if [ -z "$TESTS_DIR" ]; then
+    echo "pre-push: sibling test suite not found — skipping (NOT a pass)."
+    echo "  Looked for run.sh in:"
+    for dir in "${CANDIDATES[@]}"; do
+        echo "    $dir"
+    done
     exit 0
 fi
 
-echo "pre-push: running ../gym_app/tests/run.sh ..."
+echo "pre-push: running $TESTS_DIR/run.sh ..."
 echo
-if bash "$SIBLING_TESTS_DIR/run.sh"; then
+if bash "$TESTS_DIR/run.sh"; then
     echo
     echo "pre-push: all tests passed, allowing push."
     exit 0
