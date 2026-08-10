@@ -1368,9 +1368,9 @@
                         2: {
                             name: 'Lower',
                             exercises: [
+                                { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Leg Extensions', id: 'actual-leg-extensions', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
                                 // Keep in step with JESSI_LOWER_ORDER below —
@@ -3403,11 +3403,12 @@
         ];
 
         const JESSI_LOWER_ORDER = [
+            // Opens Lower as of Aug 2026, matching the personal app. It came up
+            // off the end of the day in two steps — first to behind Cable Wrist
+            // Curls, then to the front.
+            'Back Extensions',
             'Reverse Wrist Curls',
             'Cable Wrist Curls',
-            // Moved up off the end of Lower to sit behind Cable Wrist Curls
-            // (Aug 2026), matching the personal app.
-            'Back Extensions',
             'Ab Crunches',
             'Leg Extensions',
             // Follows Leg Extensions as of Aug 2026, matching the personal app
@@ -3496,7 +3497,10 @@
         // render and never touches the saved config.) 7 moves Back Extensions
         // up behind Cable Wrist Curls and Hip Adduction ahead of Calf Raises —
         // same names, same count, so the bump is the whole delivery mechanism.
-        const JESSI_SPLIT_REVISION = 7;
+        // 8 takes Back Extensions the rest of the way to the front of Lower,
+        // ahead of both wrist curls; reorder-only again, so again the bump is
+        // the only thing that reaches the client's phone.
+        const JESSI_SPLIT_REVISION = 8;
 
         const jessiNorm = (s) => String(s || '').toLowerCase().trim();
 
