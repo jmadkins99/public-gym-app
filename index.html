@@ -1372,14 +1372,16 @@
                                 { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Leg Extensions', id: 'actual-leg-extensions', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 // Keep in step with JESSI_LOWER_ORDER below —
                                 // this preset builds a FRESH coach-code install
                                 // while that list migrates an existing one, and
                                 // the two must agree. Test 33 pins them to each
                                 // other; a reorder applied to only one fails it.
+                                // Leg Press moved from mid-day to last here in
+                                // Aug 2026, which is exactly such a reorder.
                                 { name: 'Leg Press', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
                             ]
                         }
 
@@ -3410,13 +3412,13 @@
             'Cable Wrist Curls',
             'Ab Crunches',
             'Leg Extensions',
-            // Follows Leg Extensions as of Aug 2026, matching the personal app
-            // — the two machines share a corner of the gym now.
-            'Leg Press',
-            // Moved ahead of Calf Raises (Aug 2026), so Lower closes on Calf
-            // Raises instead of Back Extensions. Also matches the personal app.
+            // Moved ahead of Calf Raises (Aug 2026), matching the personal app.
             'Hip Adduction',
             'Calf Raises',
+            // Leg Press closes Lower as of Aug 2026, moved down from behind Leg
+            // Extensions — again matching the personal app, where the same
+            // movement is the `hip-adduction` id.
+            'Leg Press',
         ];
 
         // Four movements the June Full Body migration dropped, now returning.
@@ -3498,8 +3500,14 @@
         // same names, same count, so the bump is the whole delivery mechanism.
         // 8 takes Back Extensions the rest of the way to the front of Lower,
         // ahead of both wrist curls; reorder-only again, so again the bump is
-        // the only thing that reaches the client's phone.
-        const JESSI_SPLIT_REVISION = 8;
+        // the only thing that reaches the client's phone. 9 sends Leg Press the
+        // other way, from behind Leg Extensions to the very end of Lower — a
+        // pure reorder for the fourth time, so the bump is again the whole
+        // delivery mechanism. (Leg Press also reverts to two-side plate-loaded
+        // with 9, but as with the reclassification that shipped alongside 6,
+        // that part needs no revision: getWeightBreakdownConfig reads display
+        // names live on every render and never touches the saved config.)
+        const JESSI_SPLIT_REVISION = 9;
 
         const jessiNorm = (s) => String(s || '').toLowerCase().trim();
 
@@ -3825,11 +3833,14 @@
             if (/pendulum|squat/.test(n))        return { type: 'plate-loaded', plateMode: 'one-sided' };
             // Back Extensions moved from a single-plate station to a two-side
             // plate-loaded one (Aug 2026), matching the personal app. The
-            // logged number is now the total across both arms. Leg Press made
-            // the opposite move in the same trip and is a pin stack below —
-            // the /leg press/ plate rule that used to sit here is gone, and no
-            // earlier rule in this block catches the name.
+            // logged number is now the total across both arms.
             if (/back extension/.test(n))        return { type: 'plate-loaded', plateMode: 'two-sided' };
+            // Leg Press is back here after a brief stint as a pin stack in Aug
+            // 2026, matching the personal app's `hip-adduction` revert. It must
+            // stay in THIS block: the pin-stack rules below run second, so a
+            // duplicate /leg press/ rule down there would be dead code rather
+            // than a conflict — and the live one would be this, silently.
+            if (/leg press/.test(n))             return { type: 'plate-loaded', plateMode: 'two-sided' };
             if (/hammer row|sagittal/.test(n))   return { type: 'plate-loaded', plateMode: 'one-sided' };
             if (/transverse|upper back row/.test(n))
                                                  return { type: 'plate-loaded', plateMode: 'one-sided' };
@@ -3860,10 +3871,10 @@
             if (/ab crunch|crunch/.test(n))                        return { type: 'pin-stack' };
             if (/calf/.test(n))                                    return { type: 'pin-stack' };
             if (/leg extension|hip adduction/.test(n))             return { type: 'pin-stack' };
-            // Was plate-loaded two-sided until Aug 2026, when the gym replaced
-            // the sled with a pin stack. The real machine caps, but the max is
-            // not known yet, so no maxPin here and no overflow rows render.
-            if (/leg press/.test(n))                               return { type: 'pin-stack' };
+            // No /leg press/ rule here: it was a pin stack for part of Aug 2026
+            // and is two-side plate-loaded again, up in the plate block. Note
+            // /leg extension/ above does NOT catch "Leg Press", so removing the
+            // rule leaves the name to the plate block rather than to `null`.
 
             return null;
         }
