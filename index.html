@@ -6212,14 +6212,19 @@
                 return allSame ? { weight: first.weight, reps: first.reps } : null;
             };
 
-            // Shortest streak that earns a badge. Two: every other session
-            // changes something, so 1 would be on nearly every card always.
-            const PR_STREAK_MIN = 2;
+            // Fewest consecutive improvements that earn a badge. One: a single
+            // session that beats the one before it is the smallest thing worth
+            // calling a streak, and the baseline it beat is not counted.
+            const PR_STREAK_MIN = 1;
 
             // The mirror image of getMinimalistStagnation: how many consecutive
-            // sessions have moved this lift *forward*. Same history walk, no
-            // slice — a streak has no ceiling. Renders as the green flame pill
-            // in the exercise header.
+            // times this lift has moved *forward*. Same history walk, no slice —
+            // a streak has no ceiling. Renders as the green flame pill in the
+            // exercise header.
+            //
+            // It counts improvements, not sessions: the oldest session in the
+            // run is the baseline you improved *from*, so a flat stretch capped
+            // by one better session reads 1, not 2.
             //
             // A session extends the streak when the weight went up, or the
             // weight held and the reps went up. It breaks on an identical
@@ -6229,7 +6234,7 @@
             // getMinimalistPR bumps the weight once you hit maxReps, and the
             // next session starts back at minReps — on Jessi's 5-8 range that
             // is 8 reps to 5. Counting the app's own reward for progressing as
-            // backsliding would cap every streak at maxReps - minReps + 1.
+            // backsliding would cap every streak at maxReps - minReps.
             const getPRStreak = (exerciseId) => {
                 if (!workoutHistory || workoutHistory.length === 0) return null;
 
@@ -6270,7 +6275,8 @@
                     return newReps > oldReps;
                 };
 
-                let streak = 1;
+                // Starts at 0: one session on its own is a baseline, not a gain.
+                let streak = 0;
                 for (let i = 0; i + 1 < entries.length; i++) {
                     if (!extendsStreak(entries[i], entries[i + 1])) break;
                     streak++;
