@@ -18,6 +18,7 @@ Future updates will include new features, templates, and refinements based on us
 - **Sets & Rep Ranges**: Configure goal sets and rep ranges for each exercise
 - **Quick Start Guide**: Tutorial walks new users through logging workouts
 - **Progress Tracking**: Visual charts showing your progress over time
+- **PR Streaks**: With PR tracking on, a green flame pill beside the exercise name counts consecutive sessions that moved that lift forward. It appears at two. A session extends the streak if the weight went up, or the weight held and the reps went up; it breaks on an identical session, a weight drop, or fewer reps at the same weight. A weight increase always extends it — hitting the top of your rep range bumps the weight and restarts at the bottom, so treating that as backsliding would cap every streak at the width of the range. Counts submitted sessions, so it moves on Submit Day rather than on LOG.
 - **Weekly History**: View all past workouts by week
 - **Exercise Management**: Rename and reorder exercises in settings
 - **Backup/Restore**: Export and import your data

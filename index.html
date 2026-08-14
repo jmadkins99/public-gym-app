@@ -311,6 +311,30 @@
             color: #888;
         }
 
+        /* Consecutive sessions that moved a lift forward. British racing green,
+           fixed: the colour is the meaning, so it must not rotate with the daily
+           palette. It sits at only ~1.7:1 against the card, so the pill reads as
+           a quiet ground rather than a highlight — the white numeral on it
+           carries the signal at ~11.5:1. margin-right:auto pins it beside the
+           name instead of letting space-between float it to the middle, which
+           matters more here than on the personal app since the Weight Breakdown
+           button is gympin-gated and often absent entirely. */
+        .streak-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            margin-left: 10px;
+            margin-right: auto;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #004225;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
         .input-row {
             display: flex;
             gap: 10px;
@@ -6188,6 +6212,73 @@
                 return allSame ? { weight: first.weight, reps: first.reps } : null;
             };
 
+            // Shortest streak that earns a badge. Two: every other session
+            // changes something, so 1 would be on nearly every card always.
+            const PR_STREAK_MIN = 2;
+
+            // The mirror image of getMinimalistStagnation: how many consecutive
+            // sessions have moved this lift *forward*. Same history walk, no
+            // slice — a streak has no ceiling. Renders as the green flame pill
+            // in the exercise header.
+            //
+            // A session extends the streak when the weight went up, or the
+            // weight held and the reps went up. It breaks on an identical
+            // session, a weight drop, and fewer reps at the same weight.
+            //
+            // The weight-up case ignores reps entirely, and that is deliberate:
+            // getMinimalistPR bumps the weight once you hit maxReps, and the
+            // next session starts back at minReps — on Jessi's 5-8 range that
+            // is 8 reps to 5. Counting the app's own reward for progressing as
+            // backsliding would cap every streak at maxReps - minReps + 1.
+            const getPRStreak = (exerciseId) => {
+                if (!workoutHistory || workoutHistory.length === 0) return null;
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const sessions = workoutHistory
+                    .filter(w => {
+                        const workoutDate = new Date(w.date);
+                        workoutDate.setHours(0, 0, 0, 0);
+                        if (workoutDate > today) return false;
+                        if (workoutDate.getTime() === today.getTime() && !w.submitted) return false;
+                        if (!w.submitted) return false;
+                        const exercise = w.exercises.find(e => e.id === exerciseId);
+                        if (!exercise) return false;
+                        if (!exercise.reps || !exercise.weight) return false;
+                        if (exercise.reps === 'NA' || exercise.weight === 'NA') return false;
+                        return true;
+                    })
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                if (sessions.length === 0) return null;
+
+                const entries = sessions.map(w => w.exercises.find(e => e.id === exerciseId));
+
+                // Non-numeric weights can't be compared. This guard is load-
+                // bearing here in a way it isn't on the personal app: the card
+                // gate is isStandardOrBw, which lets bodyweight rows ('Body
+                // Weight' in the weight field) reach this comparison.
+                const extendsStreak = (newer, older) => {
+                    const newWeight = parseFloat(newer.weight);
+                    const oldWeight = parseFloat(older.weight);
+                    const newReps = parseInt(newer.reps);
+                    const oldReps = parseInt(older.reps);
+                    if ([newWeight, oldWeight, newReps, oldReps].some(isNaN)) return false;
+                    if (newWeight > oldWeight) return true;
+                    if (newWeight < oldWeight) return false;
+                    return newReps > oldReps;
+                };
+
+                let streak = 1;
+                for (let i = 0; i + 1 < entries.length; i++) {
+                    if (!extendsStreak(entries[i], entries[i + 1])) break;
+                    streak++;
+                }
+
+                return streak >= PR_STREAK_MIN ? streak : null;
+            };
+
             // ── Advanced PR tracking helpers ──────────────────────────────────────────
 
             // TODO: make these dynamic per exercise instead of hardcoded
@@ -6367,6 +6458,10 @@
                 const showMinimalistPR = minimalistPrTracking && !isLogged && isStandardOrBw;
                 const minimalistPR = showMinimalistPR ? getMinimalistPR(exercise.id) : null;
                 const minimalistStagnation = showMinimalistPR && !minimalistPR ? getMinimalistStagnation(exercise.id) : null;
+                // No !isLogged here, unlike the hints above: the streak reports
+                // history rather than suggesting a target, so it should stay put
+                // once the card is logged.
+                const prStreak = minimalistPrTracking && isStandardOrBw ? getPRStreak(exercise.id) : null;
                 const showPlateauBuster = showAdvancedPR ? isPlateauBuster(exercise.id) : false;
                 const advPrWeightRecovery = showAdvancedPR ? getPRWeightRecovery(exercise.id) : null;
                 const advFailedRetry = showAdvancedPR && !advPrWeightRecovery
@@ -6785,6 +6880,14 @@
                                     </div>
                                 )}
                             </div>
+                            {/* Sibling of .exercise-name, never a child: a pile of
+                                tests compare that node's textContent to the bare
+                                exercise name. */}
+                            {prStreak && (
+                                <div className="streak-badge" data-streak={prStreak}>
+                                    🔥 {prStreak}
+                                </div>
+                            )}
                             {hasGympinBreakdown && (
                                 <button
                                     data-gympin-breakdown-button={exercise.id}
