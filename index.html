@@ -1349,19 +1349,20 @@
                 // 2d88aba, so a coach-code install rendered the old two-day
                 // split until a refresh let the migration fix it. Test 33 pins
                 // the two together by asserting a refresh changes nothing.
-                // Kept in lockstep with JESSI_UPPER_ORDER / JESSI_LOWER_ORDER
-                // and migrateJessiToUpperLower: this is the fresh-install path,
-                // those are the existing-device path, and they must produce the
-                // same program. Test 33 pins them to each other.
+                // Kept in lockstep with JESSI_ANTERIOR_ORDER /
+                // JESSI_POSTERIOR_ORDER and migrateJessiSplit: this is the
+                // fresh-install path, those are the existing-device path, and
+                // they must produce the same program. Test 33 pins them to
+                // each other.
                 'jessi': {
-                    name: 'Upper - Lower',
+                    name: 'Anterior - Posterior',
                     minimalistPrTracking: true,
                     gympinMode: true,
                     repsDropdown: { min: 5, max: 8 },
                     bypassSchedule: true,
                     scheduleDays: JESSI_SPLIT_SCHEDULE,
                     // Stamps the config as an already-split program, which is
-                    // what migrateJessiToUpperLower keys off. Without it a
+                    // what migrateJessiSplit keys off. Without it a
                     // fresh coach-code install has two days and no stamp, so
                     // the migration reads it as "not Jessi's single Full Body
                     // day", returns null, and every future reorder silently
@@ -1370,42 +1371,40 @@
                     workoutDays: {
 
                         1: {
-                            name: 'Upper',
+                            name: 'Anterior',
                             exercises: [
-                                { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Incline Chest Press', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Recline Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Overhead Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Chest Press', id: 'chest-press', startingWeight: '100', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Incline Chest Press', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Transverse Plane Rows', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Sagittal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Overhead Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Preacher Curls', id: 'actual-preacher-curls', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
-                            ]
-                        },
-
-                        2: {
-                            name: 'Lower',
-                            exercises: [
-                                { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Leg Extensions', id: 'actual-leg-extensions', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
-                                // Keep in step with JESSI_LOWER_ORDER below —
+                                // Keep in step with JESSI_ANTERIOR_ORDER below —
                                 // this preset builds a FRESH coach-code install
                                 // while that list migrates an existing one, and
                                 // the two must agree. Test 33 pins them to each
                                 // other; a reorder applied to only one fails it.
-                                // Leg Press moved from mid-day to last here in
-                                // Aug 2026, which is exactly such a reorder.
                                 { name: 'Leg Press', sets: 1, minReps: 6, maxReps: 8 },
+                            ]
+                        },
+
+                        2: {
+                            name: 'Posterior',
+                            exercises: [
+                                { name: 'Recline Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Sagittal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Transverse Plane Rows', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Preacher Curls', id: 'actual-preacher-curls', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
                             ]
                         }
 
@@ -3315,6 +3314,12 @@
             let config;
             try { config = JSON.parse(raw); } catch (e) { return; }
 
+            // Note this one needs no splitRevision guard, unlike
+            // migrateJessiToFullBody below. Both now share a name with what the
+            // current split produces, but this function's detection is far
+            // narrower: three days AND categories of exactly Push/Pull/Legs. A
+            // modern Anterior/Posterior config has two days and two categories,
+            // so it can never reach the reshaping code past here.
             if (config.version !== 2 || !config.days) return;
             const dayKeys = Object.keys(config.days || {});
             if (dayKeys.length !== 3) return;
@@ -3383,10 +3388,11 @@
         }
 
         // Jessi's 14-slot Full Body program, by display name. Superseded as a
-        // program by the Upper/Lower split below (Aug 2026), but still load
-        // bearing in two places: migrateJessiToFullBody still builds this
-        // roster on the local-mode path, and migrateJessiToUpperLower uses the
-        // full set as its "is this actually Jessi's program?" guard.
+        // program by the Anterior/Posterior split below (Aug 2026, via a brief
+        // Upper/Lower era), but still load bearing in two places:
+        // migrateJessiToFullBody still builds this roster on the local-mode
+        // path, and migrateJessiSplit uses the full set as its "is this
+        // actually Jessi's program?" guard.
         const JESSI_FULL_BODY_ORDER = [
             'Chest Flies',
             'Recline Curls',
@@ -3405,44 +3411,56 @@
         ];
 
         // ====================================================================
-        // JESSI: UPPER / LOWER SPLIT (August 2026)
+        // JESSI: ANTERIOR / POSTERIOR SPLIT (August 2026)
         // ====================================================================
-        // Mirrors the personal app's switch away from Full Body. His program
-        // becomes an exact copy of it minus Stairmaster, which his app has no
-        // exercise type for.
+        // Mirrors the personal app, whose Upper/Lower split this replaces. Her
+        // program remains an exact copy of it minus Stairmaster, which her app
+        // has no exercise type for — same 21 movements, same two days, same
+        // order.
+        //
+        // NOT to be confused with her early-2026 Anterior/Posterior program,
+        // which migrateJessiToAnteriorPosterior further up still migrates away
+        // from. Same two words, different program: that one was PPL-derived and
+        // predates the Full Body era. The two are told apart by `splitRevision`,
+        // which only the modern pipeline stamps — see the guards on the legacy
+        // one-shots.
+        //
+        // Anatomical with a push/pull flavour rather than strict anatomy: arms
+        // are grouped by function, so triceps go Anterior and biceps Posterior.
+        // 12 Anterior, 9 Posterior — the push side carries more volume on
+        // purpose.
 
-        const JESSI_UPPER_ORDER = [
-            'Chest Flies',
-            'Incline Chest Press',
-            'Recline Curls',
-            'Overhead Tricep Extensions',
+        const JESSI_ANTERIOR_ORDER = [
             'Chest Press',
-            'Lateral Raises',
+            'Incline Chest Press',
+            'Chest Flies',
             'Shoulder Press',
-            'Frontal Plane Pulldowns',
-            'Transverse Plane Rows',
-            'Kelso Shrugs',
-            'Sagittal Plane Pulldowns',
+            'Lateral Raises',
+            'Overhead Tricep Extensions',
             'Tricep Extensions',
-            'Preacher Curls',
-        ];
-
-        const JESSI_LOWER_ORDER = [
-            // Opens Lower as of Aug 2026, matching the personal app. It came up
-            // off the end of the day in two steps — first to behind Cable Wrist
-            // Curls, then to the front.
-            'Back Extensions',
+            // The wrist pair splits by anatomy: flexors here, extensors on
+            // Posterior. They shared a day under Upper/Lower.
             'Reverse Wrist Curls',
             'Cable Wrist Curls',
             'Ab Crunches',
             'Leg Extensions',
-            // Moved ahead of Calf Raises (Aug 2026), matching the personal app.
+            // Quad-dominant, so it closes the anterior day.
+            'Leg Press',
+        ];
+
+        const JESSI_POSTERIOR_ORDER = [
+            // Biceps are grouped with the pulling work rather than with the
+            // other arm movements.
+            'Recline Curls',
+            'Frontal Plane Pulldowns',
+            'Sagittal Plane Pulldowns',
+            'Transverse Plane Rows',
+            'Kelso Shrugs',
+            'Preacher Curls',
+            'Back Extensions',
+            // Adductor magnus is a hip extensor, hence the posterior chain.
             'Hip Adduction',
             'Calf Raises',
-            // Leg Press closes Lower as of Aug 2026, moved down from behind Leg
-            // Extensions — again matching the personal app, where the same
-            // movement is the `hip-adduction` id.
-            'Leg Press',
         ];
 
         // Four movements the June Full Body migration dropped, now returning.
@@ -3483,9 +3501,14 @@
             { id: 'chest-press', name: 'Chest Press', startingWeight: '100' },
         ];
 
-        // Weekday map, mirroring the personal app: Lower on Mon/Wed/Fri, Upper
-        // on Tue/Thu/Sat and Sunday. Day 1 is Upper, matching the Upper-first
-        // ordering the personal app uses.
+        // Weekday map, mirroring the personal app: Posterior on Mon/Wed/Fri,
+        // Anterior on Tue/Thu/Sat and Sunday. Day 1 is Anterior, matching the
+        // Anterior-first ordering the personal app uses.
+        //
+        // Unchanged by the Aug 2026 Anterior/Posterior switch: day 2 was Lower
+        // on Mon/Wed/Fri and is Posterior on Mon/Wed/Fri, so only the names
+        // moved. Leaving the numbers alone is what keeps a client who has since
+        // shifted a day for themselves from having it stomped.
         const JESSI_SPLIT_SCHEDULE = [
             { dayOfWeek: 'Monday',    workoutDayNumber: 2 },
             { dayOfWeek: 'Tuesday',   workoutDayNumber: 1 },
@@ -3531,7 +3554,15 @@
         // with 9, but as with the reclassification that shipped alongside 6,
         // that part needs no revision: getWeightBreakdownConfig reads display
         // names live on every render and never touches the saved config.)
-        const JESSI_SPLIT_REVISION = 9;
+        //
+        // 10 is the switch from Upper/Lower to Anterior/Posterior, mirroring
+        // the personal app's version 14. Same 21 movements, nothing added or
+        // dropped — every one of them just changes day, order, or both — so
+        // once again the bump is the entire delivery mechanism. It also flips
+        // `categories` to Anterior/Posterior, which is why the two legacy
+        // one-shots above now bail out on any config carrying a splitRevision:
+        // their Jessi-shape detection keys on exactly those category names.
+        const JESSI_SPLIT_REVISION = 10;
 
         const jessiNorm = (s) => String(s || '').toLowerCase().trim();
 
@@ -3551,9 +3582,15 @@
             return null;
         }
 
-        // Split Jessi's single Full Body day into Upper (day 1) and Lower
-        // (day 2), restoring the four dropped movements and adding Preacher
-        // Curls. Pure: returns { config, schedule, recoveredIds } to persist,
+        // Split Jessi's single Full Body day into Anterior (day 1) and
+        // Posterior (day 2), restoring the four dropped movements and adding
+        // Preacher Curls. Named for what it does rather than for the split it
+        // currently produces: it has already carried her program through
+        // Torso/Limbs, Full Body and Upper/Lower on revision bumps alone, and
+        // the name should not need changing again on the next one. (It also
+        // cannot be called migrateJessiToAnteriorPosterior — that name is taken
+        // by the unrelated one-shot further up that migrates her 2026 PPL-era
+        // data.) Pure: returns { config, schedule, recoveredIds } to persist,
         // or null when there is nothing to do. `schedule` is null when the
         // caller should leave the saved schedule alone.
         //
@@ -3574,7 +3611,7 @@
         //
         // Ids, weights, rep ranges and every top-level flag pass through
         // untouched — workoutHistory and PR lookups key on id, never position.
-        function migrateJessiToUpperLower(config, workoutHistory, schedule) {
+        function migrateJessiSplit(config, workoutHistory, schedule) {
             if (!config || config.version !== 2 || !config.days) return null;
             if (config.splitRevision === JESSI_SPLIT_REVISION) return null;
 
@@ -3632,22 +3669,22 @@
                 .filter(Boolean)
                 .map((ex, order) => ({ ...ex, category, order }));
 
-            const upper = take(JESSI_UPPER_ORDER, 'Upper');
-            const lower = take(JESSI_LOWER_ORDER, 'Lower');
+            const anterior = take(JESSI_ANTERIOR_ORDER, 'Anterior');
+            const posterior = take(JESSI_POSTERIOR_ORDER, 'Posterior');
 
             // Anything the client added themselves that isn't on either list.
-            // Kept rather than dropped, appended to Lower in its existing
+            // Kept rather than dropped, appended to Posterior in its existing
             // relative order — the shorter day, and never silently discarded.
-            const placed = new Set([...JESSI_UPPER_ORDER, ...JESSI_LOWER_ORDER].map(jessiNorm));
+            const placed = new Set([...JESSI_ANTERIOR_ORDER, ...JESSI_POSTERIOR_ORDER].map(jessiNorm));
             const extras = existing
                 .filter(e => !placed.has(jessiNorm(e.name)))
-                .map((ex, i) => ({ ...ex, category: 'Lower', order: lower.length + i }));
+                .map((ex, i) => ({ ...ex, category: 'Posterior', order: posterior.length + i }));
 
             return {
                 config: {
                     ...config,
-                    days: { 1: upper, 2: lower.concat(extras) },
-                    categories: ['Upper', 'Lower'],
+                    days: { 1: anterior, 2: posterior.concat(extras) },
+                    categories: ['Anterior', 'Posterior'],
                     splitRevision: JESSI_SPLIT_REVISION,
                 },
                 // Only rewrite the schedule when the split is first applied.
@@ -3681,6 +3718,17 @@
             if (!raw) return;
             let config;
             try { config = JSON.parse(raw); } catch (e) { return; }
+
+            // Never collapse a config the modern split pipeline has stamped.
+            // This matters more than it looks: `isAP` below fires on categories
+            // of Anterior/Posterior, which since Aug 2026 is what the CURRENT
+            // split produces, not just the 2026 PPL-era one this was written
+            // for. Without this guard, any device whose one-shot flag is unset
+            // — a fresh coach-code install, or a restored backup — would have
+            // its brand-new Anterior/Posterior program collapsed back into a
+            // single Full Body day, silently dropping Lateral Raises, both
+            // wrist curls and Overhead Tricep Extensions.
+            if (config.splitRevision !== undefined) return;
 
             if (config.version !== 2 || !config.days) return;
             const cats = (config.categories || []).map(c => String(c).toLowerCase());
@@ -4133,7 +4181,7 @@
                     // the program, since the legacy sentinel migrations above
                     // are gated on repo.mode === 'local'. Needs the loaded
                     // history so returning movements reclaim their original ids.
-                    const split = migrateJessiToUpperLower(savedConfig, savedHistory, savedSchedule);
+                    const split = migrateJessiSplit(savedConfig, savedHistory, savedSchedule);
                     if (split) {
                         savedConfig = split.config;
                         repo.saveExerciseConfig(split.config);
