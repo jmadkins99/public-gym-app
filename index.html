@@ -1297,7 +1297,8 @@
                 'D1O9O9M2': 'jessi',
                 'D6O9O6M9': 'graciepoo',
                 'B1G4RK': 'noah',
-                'D2O9O9M1': 'shawn'
+                'D2O9O9M1': 'shawn',
+                'D2O0O1M7': 'ian'
             };
             return manifest[doomId] || null;
         }
@@ -1533,6 +1534,72 @@
 				{ name: 'Hammer Curls', sets: 2, minReps: 6, maxReps: 8 },
 			    ]
 			},
+
+                    }
+                },
+
+                // Ian. Close to Jessi's split — same two days, same 6-8 goal
+                // range, same 5-8 reps dropdown — but his own roster, order and
+                // gym. Differences worth knowing:
+                //
+                //   - No Chest Press, so Anterior is 11 movements to her 12.
+                //   - Shoulders and triceps lead the day; chest sits 7th-8th.
+                //   - "Wrist Curls" and "Incline Curls" are his names for what
+                //     she calls Cable Wrist Curls and Recline Curls.
+                //   - Every movement is seeded loadType 'pin'. He trains
+                //     somewhere else, so the name-based rules — which would make
+                //     six of these plate-loaded, on the assumption they are her
+                //     machines — are overridden outright. He can correct any of
+                //     them in Settings.
+                //   - No startingWeight anywhere. His first session is blank by
+                //     choice; note this means the Weight Breakdown opens empty
+                //     until he types a weight, since it bails at target === 0.
+                //
+                // Deliberately NO splitRevision. Stamping one would expose him
+                // to migrateJessiSplit rebuilding his program as hers on the
+                // next JESSI_SPLIT_REVISION bump; omitting it used to expose him
+                // to migrateJessiToFullBody collapsing his two days into one.
+                // The coachPreset stamp written by handleCoachIdVerified is what
+                // holds both off, and it does so for every future client too.
+                'ian': {
+                    name: 'Anterior - Posterior',
+                    minimalistPrTracking: true,
+                    repsDropdown: { min: 5, max: 8 },
+                    bypassSchedule: true,
+                    scheduleDays: IAN_SPLIT_SCHEDULE,
+                    workoutDays: {
+
+                        1: {
+                            name: 'Anterior',
+                            exercises: [
+                                { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Tricep Extensions', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Lateral Raises', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Overhead Tricep Extensions', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Wrist Curls', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Incline Chest Press', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Leg Extensions', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Leg Press', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                            ]
+                        },
+
+                        2: {
+                            name: 'Posterior',
+                            exercises: [
+                                { name: 'Sagittal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Transverse Plane Rows', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Preacher Curls', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Incline Curls', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                            ]
+                        }
 
                     }
                 }
@@ -2188,6 +2255,11 @@
                                     minReps: ex.minReps || 8,
                                     maxReps: ex.maxReps || 12,
                                     ...(ex.startingWeight ? { startingWeight: ex.startingWeight } : {}),
+                                    // A preset may seed how each machine is
+                                    // loaded, for a client whose gym the
+                                    // name-based rules would guess wrong about.
+                                    // Omitted leaves resolveLoadType to guess.
+                                    ...(ex.loadType ? { loadType: ex.loadType } : {}),
                                     order: idx
                                 };
                             }
@@ -2215,6 +2287,12 @@
                         prTracking: preset.prTracking || false,
                         advancedPrTracking: preset.advancedPrTracking || false,
                         minimalistPrTracking: preset.minimalistPrTracking || false,
+                        // Which preset built this config. Read by the Jessi
+                        // one-shots below, which otherwise identify her install
+                        // by the shape of its categories — a signal that also
+                        // matches any other client on an Anterior/Posterior
+                        // split, and would collapse their program into one day.
+                        coachPreset: identifier,
                         // Carried from the preset so a coach-code install gets
                         // this immediately. The one-shot enabler below only runs
                         // at mount, so without this a fresh install would need a
@@ -3507,6 +3585,24 @@
         // on Mon/Wed/Fri and is Posterior on Mon/Wed/Fri, so only the names
         // moved. Leaving the numbers alone is what keeps a client who has since
         // shifted a day for themselves from having it stomped.
+        // Ian's weekday map. The numeric mirror of Jessi's below: day 1 is Anterior
+        // on Mon/Wed/Fri, day 2 is Posterior on Tue/Thu/Sat and Sunday. All seven
+        // days are listed deliberately — an omitted weekday is a rest day, and
+        // getTodayDay() would return null and highlight nothing on it.
+        //
+        // No revision constant accompanies this, and there is no Ian migration.
+        // His program is settled, so the preset is the only path that builds it;
+        // the coachPreset stamp is what keeps Jessi's one-shots off it.
+        const IAN_SPLIT_SCHEDULE = [
+            { dayOfWeek: 'Monday',    workoutDayNumber: 1 },
+            { dayOfWeek: 'Tuesday',   workoutDayNumber: 2 },
+            { dayOfWeek: 'Wednesday', workoutDayNumber: 1 },
+            { dayOfWeek: 'Thursday',  workoutDayNumber: 2 },
+            { dayOfWeek: 'Friday',    workoutDayNumber: 1 },
+            { dayOfWeek: 'Saturday',  workoutDayNumber: 2 },
+            { dayOfWeek: 'Sunday',    workoutDayNumber: 2 },
+        ];
+
         const JESSI_SPLIT_SCHEDULE = [
             { dayOfWeek: 'Monday',    workoutDayNumber: 2 },
             { dayOfWeek: 'Tuesday',   workoutDayNumber: 1 },
@@ -3611,6 +3707,11 @@
         // untouched — workoutHistory and PR lookups key on id, never position.
         function migrateJessiSplit(config, workoutHistory, schedule) {
             if (!config || config.version !== 2 || !config.days) return null;
+            // A config stamped for a different coach preset is not Jessi's.
+            // The day-count and name guards below already keep a two-day client
+            // out, but those are circumstantial — this says it outright, and it
+            // is what would hold if a future preset happened to be one day.
+            if (config.coachPreset && config.coachPreset !== 'jessi') return null;
             if (config.splitRevision === JESSI_SPLIT_REVISION) return null;
 
             const dayKeys = Object.keys(config.days).sort((a, b) => Number(a) - Number(b));
@@ -3716,6 +3817,11 @@
             if (!raw) return;
             let config;
             try { config = JSON.parse(raw); } catch (e) { return; }
+
+            // A config stamped for a different coach preset is not Jessi's,
+            // whatever its category names look like. Absent on installs that
+            // predate the stamp, including her own, so they are unaffected.
+            if (config.coachPreset && config.coachPreset !== 'jessi') return;
 
             // Never collapse a config the modern split pipeline has stamped.
             // This matters more than it looks: `isAP` below fires on categories
@@ -3837,6 +3943,11 @@
             let config;
             try { config = JSON.parse(raw); } catch (e) { return; }
 
+            // A config stamped for a different coach preset is not Jessi's,
+            // whatever its category names look like. Absent on installs that
+            // predate the stamp, including her own, so they are unaffected.
+            if (config.coachPreset && config.coachPreset !== 'jessi') return;
+
             if (config.version !== 2 || !config.days) return;
             const cats = (config.categories || []).map(c => String(c).toLowerCase());
             const isAP = cats.length === 2 && cats.includes('anterior') && cats.includes('posterior');
@@ -3899,12 +4010,17 @@
                                                  return { type: 'plate-loaded', plateMode: 'one-sided' };
             if (/kelso|shrug/.test(n))           return { type: 'plate-loaded', plateMode: 'one-sided' };
 
-            // Pin-stack with overflow cap — cable wrist curls maxes at 97.5 then
-            // accepts hanging plates one-sided.
-            if (/cable wrist curl/.test(n))
-                return { type: 'pin-stack', maxPin: 97.5, overflowPlateMode: 'one-sided' };
+            // Cable Wrist Curls was capped at 97.5 here until Aug 2026, with the
+            // excess hung as one-sided plates. The personal app dropped that cap
+            // when the user moved to a cable machine whose working weights are
+            // nowhere near its ceiling, and this was the last copy of it. There
+            // is now no capped machine in these rules at all: `cable wrist curl`
+            // falls through to the generic wrist rule below and comes back a
+            // plain stack. Reinstating a cap is one rule returning
+            // `{ type: 'pin-stack', maxPin: N }` — the calculator still honours
+            // it (see gympinCalculatePinStackBreakdown).
 
-            // Plain pin-stack — any other Jessi-program movement that uses a stack.
+            // Plain pin-stack — any other movement that uses a stack.
             if (/recline/.test(n))                                 return { type: 'pin-stack' };
             if (/chest fl/.test(n))                                return { type: 'pin-stack' };
             // Matches "Chest Press" and "Incline Chest Press" alike — both are
@@ -3961,27 +4077,24 @@
         }
 
         // Build the config the breakdown calculators expect from the resolved
-        // load type. Caps stay name-derived: a ceiling belongs to one specific
-        // machine rather than to a way of loading one, and the only capped
-        // machine in the rules is the 97.5 cable wrist curl station. Carried
-        // over only when the exercise is actually a pin stack, so a cap left
-        // behind on a machine the user has reclassified is inert.
+        // load type.
+        //
+        // This used to copy a `maxPin` (and an `overflowPlateMode` that nothing
+        // ever read) off the name-based guess. No rule produces a cap any more,
+        // so both were dead weight and the pin branch is now a bare type. If a
+        // capped machine reappears, give it a rule returning `maxPin` and carry
+        // that through here — the calculator's cap handling was left intact.
         function breakdownConfigFor(exercise) {
             const loadType = resolveLoadType(exercise);
             if (loadType === 'plate-two-sided') return { type: 'plate-loaded', plateMode: 'two-sided' };
             if (loadType === 'plate-one-sided') return { type: 'plate-loaded', plateMode: 'one-sided' };
-            const guess = getWeightBreakdownConfig(exercise && exercise.name);
-            const capped = (guess && guess.type === 'pin-stack') ? guess : {};
-            return {
-                type: 'pin-stack',
-                maxPin: capped.maxPin,
-                overflowPlateMode: capped.overflowPlateMode,
-            };
+            return { type: 'pin-stack' };
         }
 
         // Break `weight` into the largest combination of standard plates that
-        // doesn't exceed it. Used for both plate-loaded sets and the overflow
-        // portion of pin-stack-with-cap. Returns { 45: count, 25: count, ... }.
+        // doesn't exceed it. Used for plate-loaded sets, and for the overflow
+        // portion of a capped pin stack if one ever exists again — no rule
+        // produces a cap today. Returns { 45: count, 25: count, ... }.
         function gympinBreakdownPlatesFloor(weight) {
             const available = [45, 25, 10, 5, 2.5, 1.25];
             const plates = {};
@@ -4026,8 +4139,11 @@
         }
 
         // Pin-stack breakdown — mirrors gym_app's calculatePinStackBreakdown.
-        // For pin-stack-with-cap exercises, sets above maxPin show "pin at max
-        // + plates for the excess" (plates rounded DOWN to clean combinations).
+        // A set above `config.maxPin` shows "pin at max + plates for the excess"
+        // (plates rounded DOWN to clean combinations). Nothing sets a cap since
+        // Aug 2026, so `maxPin` is always null in practice and every set takes
+        // the plain branch; the handling is kept because it is what a
+        // reintroduced cap would hang off, and it costs one `|| null`.
         function gympinCalculatePinStackBreakdown(totalWeight, config) {
             const maxPin = (config && config.maxPin) || null;
             const roundPin = (weight) => {

@@ -11,7 +11,7 @@ Future updates will include new features, templates, and refinements based on us
 ## Features
 
 - **Setup Wizard**: 4-step onboarding to configure your workout schedule and exercises
-- **Coached Programs**: Access pre-configured workout programs if you're working with a coach
+- **Coached Programs**: Access pre-configured workout programs if you're working with a coach. A coach code builds the whole program on one load — days, order, goal ranges, weekday map, and how each machine is loaded — so a client never sees a half-configured app.
 - **Custom Schedules**: 1-7 workout days per week with custom day names
 - **Exercise Library**: 70+ common exercises with autocomplete, or create your own
 - **Cardio Support**: Dedicated fields for cardio exercises (Intensity levels 1-15, Time tracking)
