@@ -318,7 +318,7 @@
            carries the signal at ~11.5:1. margin-right:auto pins it beside the
            name instead of letting space-between float it to the middle, which
            matters more here than on the personal app since the Weight Breakdown
-           button is gympin-gated and often absent entirely. */
+           button sits on the same row. */
         .streak-badge {
             display: inline-flex;
             align-items: center;
@@ -1357,7 +1357,6 @@
                 'jessi': {
                     name: 'Anterior - Posterior',
                     minimalistPrTracking: true,
-                    gympinMode: true,
                     repsDropdown: { min: 5, max: 8 },
                     bypassSchedule: true,
                     scheduleDays: JESSI_SPLIT_SCHEDULE,
@@ -2217,10 +2216,9 @@
                         advancedPrTracking: preset.advancedPrTracking || false,
                         minimalistPrTracking: preset.minimalistPrTracking || false,
                         // Carried from the preset so a coach-code install gets
-                        // these immediately. The one-shot enablers below only
-                        // run at mount, so without this a fresh install would
-                        // need a second load before either feature appeared.
-                        gympinMode: preset.gympinMode || false,
+                        // this immediately. The one-shot enabler below only runs
+                        // at mount, so without this a fresh install would need a
+                        // second load before the dropdown appeared.
                         repsDropdown: preset.repsDropdown || null,
                         // Only present on presets that are a revision of a
                         // migrated program; see the note on the jessi preset.
@@ -3817,34 +3815,13 @@
             storage.setItem('jessiFullBodyMigrationApplied5', 'true');
         }
 
-        // One-shot: auto-enable gympinMode for Jessi's installs without requiring
-        // ?gympin=on. We identify "Jessi-shaped" by the same signal the TL
-        // migration uses: an exerciseConfig whose categories are Anterior/
-        // Posterior or Torso/Limbs (no other user picks those in the wizard).
-        // Gated by its own flag so it's independent of TL migration bumps.
-        function enableGympinForJessi() {
-            if (storage.getItem('jessiGympinEnabled') === 'true') return;
-
-            const raw = storage.getItem('gymExerciseConfig');
-            if (!raw) return;
-            let config;
-            try { config = JSON.parse(raw); } catch (e) { return; }
-
-            if (config.version !== 2 || !config.days) return;
-            const cats = (config.categories || []).map(c => String(c).toLowerCase());
-            const isAP = cats.length === 2 && cats.includes('anterior') && cats.includes('posterior');
-            const isTL = cats.length === 2 && cats.includes('torso') && cats.includes('limbs');
-            const isFB = cats.length === 1 && cats.includes('full body');
-            if (!isAP && !isTL && !isFB) return;
-
-            config.gympinMode = true;
-            storage.setItem('gymExerciseConfig', JSON.stringify(config));
-            storage.setItem('jessiGympinEnabled', 'true');
-        }
-
         // One-shot: turn the standard card's Reps field into a 5-8 dropdown for
-        // Jessi, mirroring the personal app's 3-6 dropdown. Same Jessi-shaped
-        // signal as enableGympinForJessi, own flag so the two stay independent.
+        // Jessi, mirroring the personal app's 3-6 dropdown. Identifies a
+        // "Jessi-shaped" install by its exerciseConfig categories — Anterior/
+        // Posterior, Torso/Limbs or Full Body, none of which anyone else picks
+        // in the wizard. A sibling one-shot used the same signal to enable the
+        // Weight Breakdown until that became unconditional in Aug 2026; this is
+        // the last one-shot keyed off that shape.
         //
         // The range extends one BELOW his 6-8 goal range so a set that missed
         // the floor can be recorded; minReps is display-only and never feeds
@@ -3873,14 +3850,18 @@
         }
 
         // ============================================================================
-        // GYMPIN: Weight Breakdown
+        // Weight Breakdown
         // ============================================================================
-        // Opt-in feature for coached users (currently just Jessi). Enabled via the
-        // `gympinMode` field on exerciseConfig. Set it once on the user's device
-        // by visiting the app with `?gympin=on` (or `?gympin=off` to disable);
-        // the App component picks the param up on mount, flips the flag, and
-        // strips the param from the URL. The flag travels with the user's
-        // exerciseConfig backup so it survives restore.
+        // Shown for every exercise, for every user. It was opt-in for coached
+        // users until Aug 2026, behind a `gympinMode` field on exerciseConfig
+        // that was set by visiting with `?gympin=on` and auto-enabled for
+        // Jessi-shaped installs. That flag, its URL toggle and its one-shot
+        // enabler are all gone: once each user can say how their own machines
+        // are loaded, there is no reason to hide the breakdown from anyone. The
+        // `gympin` prefix on the helpers below is what is left of the name.
+        //
+        // An old backup may still carry `gympinMode`. It is ignored on restore
+        // rather than migrated away — nothing reads it.
 
         // Classify a Jessi-style exercise display name into a weight-breakdown
         // config. Mirrors gym_app/js/config.js: pin-stack machines (with optional
@@ -3949,6 +3930,53 @@
             // rule leaves the name to the plate block rather than to `null`.
 
             return null;
+        }
+
+        // How a machine is loaded. A per-exercise USER setting, chosen in
+        // Settings > Manage Exercises and stored on the exercise alongside
+        // `name`, `sets`, `minReps` and `maxReps`.
+        //
+        // getWeightBreakdownConfig above is no longer the authority — it is the
+        // DEFAULT. It guesses from the display name, which is the only thing
+        // available for an exercise the user typed in themselves, and it is
+        // right often enough to be a good starting point. But it is guessing
+        // about someone else's gym: two people with a machine called "Chest
+        // Press" may have a stack and a plate sled respectively, and no regex
+        // can tell them apart. The dropdown is how they correct it.
+        const LOAD_TYPES = ['pin', 'plate-one-sided', 'plate-two-sided'];
+
+        // The effective load type: the user's choice if they made one, else
+        // whatever the name-based rules guess, else a plain pin stack. Note the
+        // final fallback matters more here than in the personal app — there is
+        // no fixed roster, so a custom exercise named something the rules have
+        // never seen is normal rather than exceptional.
+        function resolveLoadType(exercise) {
+            if (exercise && LOAD_TYPES.includes(exercise.loadType)) return exercise.loadType;
+            const guess = getWeightBreakdownConfig(exercise && exercise.name);
+            if (!guess) return 'pin';
+            if (guess.type === 'plate-loaded') {
+                return guess.plateMode === 'two-sided' ? 'plate-two-sided' : 'plate-one-sided';
+            }
+            return 'pin';
+        }
+
+        // Build the config the breakdown calculators expect from the resolved
+        // load type. Caps stay name-derived: a ceiling belongs to one specific
+        // machine rather than to a way of loading one, and the only capped
+        // machine in the rules is the 97.5 cable wrist curl station. Carried
+        // over only when the exercise is actually a pin stack, so a cap left
+        // behind on a machine the user has reclassified is inert.
+        function breakdownConfigFor(exercise) {
+            const loadType = resolveLoadType(exercise);
+            if (loadType === 'plate-two-sided') return { type: 'plate-loaded', plateMode: 'two-sided' };
+            if (loadType === 'plate-one-sided') return { type: 'plate-loaded', plateMode: 'one-sided' };
+            const guess = getWeightBreakdownConfig(exercise && exercise.name);
+            const capped = (guess && guess.type === 'pin-stack') ? guess : {};
+            return {
+                type: 'pin-stack',
+                maxPin: capped.maxPin,
+                overflowPlateMode: capped.overflowPlateMode,
+            };
         }
 
         // Break `weight` into the largest combination of standard plates that
@@ -4067,7 +4095,6 @@
             const [prTracking, setPrTracking] = useState(false);
             const [advancedPrTracking, setAdvancedPrTracking] = useState(false);
             const [minimalistPrTracking, setMinimalistPrTracking] = useState(false);
-            const [gympinMode, setGympinMode] = useState(false);
             // { min, max } turns the standard card's free-type Reps field into a
             // dropdown of that inclusive range. null = free-type (everyone else).
             const [repsDropdown, setRepsDropdown] = useState(null);
@@ -4104,9 +4131,6 @@
 
                 // One-shot Torso/Limbs migration for Jessi's Anterior/Posterior data
                 migrateJessiToFullBody();
-
-                // One-shot auto-enable of gympin Weight Breakdown for Jessi
-                enableGympinForJessi();
 
                 // One-shot auto-enable of the 5-8 reps dropdown for Jessi
                 enableRepsDropdownForJessi();
@@ -4148,19 +4172,6 @@
                     setShowWizard(true);
                     setHydrated(true);
                     return;
-                }
-
-                // ?gympin=on / ?gympin=off — coach-only toggle. Applied to the
-                // loaded config and persisted, then the param is stripped.
-                const params = new URLSearchParams(window.location.search);
-                const gympinParam = params.get('gympin');
-                if (gympinParam === 'on' || gympinParam === 'off') {
-                    savedConfig = savedConfig || {};
-                    savedConfig.gympinMode = (gympinParam === 'on');
-                    repo.saveExerciseConfig(savedConfig);
-                    params.delete('gympin');
-                    const cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
-                    window.history.replaceState({}, '', cleanUrl);
                 }
 
                 // Load workout history
@@ -4222,9 +4233,6 @@
                         }
                         if (config.minimalistPrTracking !== undefined) {
                             setMinimalistPrTracking(config.minimalistPrTracking);
-                        }
-                        if (config.gympinMode !== undefined) {
-                            setGympinMode(config.gympinMode);
                         }
                         if (config.repsDropdown !== undefined) {
                             setRepsDropdown(config.repsDropdown);
@@ -4429,7 +4437,6 @@
                     prTracking,
                     advancedPrTracking,
                     minimalistPrTracking,
-                    gympinMode,
                     repsDropdown
                 };
             };
@@ -4966,9 +4973,6 @@
                                 if (imported.exerciseConfig.minimalistPrTracking !== undefined) {
                                     setMinimalistPrTracking(imported.exerciseConfig.minimalistPrTracking);
                                 }
-                                if (imported.exerciseConfig.gympinMode !== undefined) {
-                                    setGympinMode(imported.exerciseConfig.gympinMode);
-                                }
                                 if (imported.exerciseConfig.repsDropdown !== undefined) {
                                     setRepsDropdown(imported.exerciseConfig.repsDropdown);
                                 }
@@ -5003,7 +5007,6 @@
                         storage.removeItem('jessiFullBodyMigrationApplied3');
                         storage.removeItem('jessiFullBodyMigrationApplied2');
                         storage.removeItem('jessiFullBodyMigrationApplied1');
-                        storage.removeItem('jessiGympinEnabled');
                         storage.removeItem('jessiRepsDropdownEnabled');
                         setWorkoutHistory([]);
                         setWorkoutData({});
@@ -5082,9 +5085,6 @@
                                         }
                                         if (config.minimalistPrTracking !== undefined) {
                                             setMinimalistPrTracking(config.minimalistPrTracking);
-                                        }
-                                        if (config.gympinMode !== undefined) {
-                                            setGympinMode(config.gympinMode);
                                         }
                                         if (config.repsDropdown !== undefined) {
                                             setRepsDropdown(config.repsDropdown);
@@ -5231,7 +5231,6 @@
                             prTracking={prTracking}
                             advancedPrTracking={advancedPrTracking}
                             minimalistPrTracking={minimalistPrTracking}
-                            gympinMode={gympinMode}
                             repsDropdown={repsDropdown}
                             expandedWeightBreakdown={expandedWeightBreakdown}
                             setExpandedWeightBreakdown={setExpandedWeightBreakdown}
@@ -5385,6 +5384,7 @@
             const [tempSets, setTempSets] = useState('');
             const [tempMinReps, setTempMinReps] = useState('');
             const [tempMaxReps, setTempMaxReps] = useState('');
+            const [tempLoadType, setTempLoadType] = useState('pin');
 
             const handleStartEdit = (exercise) => {
                 setEditingExercise(exercise.id);
@@ -5392,6 +5392,11 @@
                 setTempSets(exercise.sets || '');
                 setTempMinReps(exercise.minReps || '');
                 setTempMaxReps(exercise.maxReps || '');
+                // Seed from the resolved value, not the raw field: an exercise
+                // the user has never edited has no loadType, and the dropdown
+                // should open showing the guess it is currently being given
+                // rather than defaulting to the first option.
+                setTempLoadType(resolveLoadType(exercise));
             };
 
             const handleSaveEdit = (day, exerciseId) => {
@@ -5399,7 +5404,8 @@
                     updateExerciseName(day, exerciseId, tempName.trim(), {
                         sets: tempSets === '' ? '' : parseInt(tempSets) || 0,
                         minReps: tempMinReps === '' ? '' : parseInt(tempMinReps) || 0,
-                        maxReps: tempMaxReps === '' ? '' : parseInt(tempMaxReps) || 0
+                        maxReps: tempMaxReps === '' ? '' : parseInt(tempMaxReps) || 0,
+                        loadType: tempLoadType
                     });
                 }
                 setEditingExercise(null);
@@ -5407,6 +5413,7 @@
                 setTempSets('');
                 setTempMinReps('');
                 setTempMaxReps('');
+                setTempLoadType('pin');
             };
 
             const handleCancelEdit = () => {
@@ -5524,6 +5531,34 @@
                                                                 />
                                                             </div>
                                                         </div>
+                                                        {/* How this machine is loaded, which decides what the
+                                                            Weight Breakdown shows. Sits under the same guard as
+                                                            the sets/reps goal — cardio has no load to break
+                                                            down. Defaults to whatever the name-based rules
+                                                            guess; this is where the user overrules them. */}
+                                                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--accent-muted)', marginTop: '12px', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                            How It's Loaded
+                                                        </label>
+                                                        <select
+                                                            data-field="loadType"
+                                                            value={tempLoadType}
+                                                            onChange={(e) => setTempLoadType(e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '8px',
+                                                                background: '#0d0d1a',
+                                                                border: '1px solid #2a2a3a',
+                                                                borderRadius: '4px',
+                                                                color: '#b8b8d0',
+                                                                fontSize: '14px',
+                                                                marginBottom: '12px',
+                                                                boxSizing: 'border-box'
+                                                            }}
+                                                        >
+                                                            <option value="pin">Pin-loaded</option>
+                                                            <option value="plate-two-sided">Plate-loaded on both sides</option>
+                                                            <option value="plate-one-sided">Plate-loaded on one side</option>
+                                                        </select>
                                                     </>
                                                 )}
                                                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -6114,7 +6149,7 @@
             );
         }
 
-        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors, prTracking, advancedPrTracking, minimalistPrTracking, gympinMode, repsDropdown, expandedWeightBreakdown, setExpandedWeightBreakdown, workoutHistory }) {
+        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors, prTracking, advancedPrTracking, minimalistPrTracking, repsDropdown, expandedWeightBreakdown, setExpandedWeightBreakdown, workoutHistory }) {
             const exercises = getCurrentExercises();
 
             // Group exercises by category dynamically
@@ -6912,8 +6947,17 @@
                     return undefined;
                 })();
 
-                const gympinConfig = gympinMode ? getWeightBreakdownConfig(exercise.name) : null;
-                const hasGympinBreakdown = !!gympinConfig;
+                // Every exercise gets a Weight Breakdown button. This used to be
+                // gated behind `gympinMode`, an exerciseConfig flag switched on
+                // by ?gympin=on and auto-enabled for Jessi's installs, so in
+                // practice only she ever saw it. The gate went away in Aug 2026
+                // when the load type became something each user sets for
+                // themselves: the name-based rules guess, the user corrects, and
+                // there is no longer a reason to hide the result from anyone.
+                // The `gympin` prefix on the helpers and data attributes below
+                // is left over from that era and means nothing now.
+                const gympinConfig = breakdownConfigFor(exercise);
+                const hasGympinBreakdown = true;
                 const isGympinExpanded = expandedWeightBreakdown === exercise.id;
 
                 return (
