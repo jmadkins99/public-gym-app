@@ -3574,7 +3574,7 @@
         //
         // startingWeight seeds the weight input until it is logged once. It is
         // deliberately NOT a synthetic history entry: fabricating a workout
-        // would show up as a real session in the Weekly tab, count toward PR
+        // would show up as a real session in the History tab, count toward PR
         // baselines and day totals, and sync a bogus doc to Firestore.
         const JESSI_NEW_EXERCISES = [
             { id: 'actual-preacher-curls', name: 'Preacher Curls', startingWeight: '50' },
@@ -5336,7 +5336,7 @@
                                 className={`nav-btn ${currentView === 'weekly' ? 'active' : ''}`}
                                 onClick={() => { setCurrentView('weekly'); setViewingWeek(currentWeek); window.scrollTo(0, 0); }}
                             >
-                                Weekly
+                                History
                             </button>
                         </div>
                     </div>

@@ -20,7 +20,7 @@ Future updates will include new features, templates, and refinements based on us
 - **Progress Tracking**: Visual charts showing your progress over time
 - **PR Streaks**: With PR tracking on, a green flame pill beside the exercise name counts consecutive improvements — the session you started from is the baseline, not a notch on the streak, so one better session after a flat stretch reads 1. It appears at one. A session extends the streak if the weight went up, or the weight held and the reps went up; it breaks on an identical session, a weight drop, or fewer reps at the same weight. A weight increase always extends it — hitting the top of your rep range bumps the weight and restarts at the bottom, so treating that as backsliding would cap every streak at the width of the range. Counts submitted sessions, so it moves on Submit Day rather than on LOG.
 - **Weight Breakdown**: every exercise has a button showing two warmup sets at roughly 70% and 90% of your working weight. What it shows depends on how that machine is loaded, which you set per exercise in Settings → Manage Day N Exercises → ✏️ → How It's Loaded: **Pin-loaded** gives achievable pin and micro-plate weights, **Plate-loaded on both sides** gives an exact plate breakdown split per side, and **Plate-loaded on one side** gives the plate breakdown as a single pile. The app guesses from the exercise name to start with, and the dropdown is how you correct it — no two gyms have the same machines, and a name can't tell them apart.
-- **Weekly History**: View all past workouts by week
+- **History**: View all past workouts by week
 - **Exercise Management**: Rename and reorder exercises in settings
 - **Backup/Restore**: Export and import your data
 - **Offline First**: All data stored locally in your browser
@@ -44,7 +44,7 @@ The rotation script at the top of `index.html` is kept byte-identical to the per
    - Choose "I Have a Coach" to load a pre-configured program from your coach
 2. **Log Workouts**: Enter your weight/reps, tap LOG to save each set
 3. **Submit Day**: Tap "Submit Day" when finished to lock your workout
-4. **Track Progress**: View history in the Weekly tab and charts in the Progress tab
+4. **Track Progress**: View history in the History tab and charts in the Progress tab
 
 ## Usage
 
