@@ -1379,11 +1379,15 @@
                                 { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Overhead Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
+                                // Abs and quads moved up ahead of Tricep
+                                // Extensions and the wrist pair (Aug 2026), so
+                                // the big movements come before the small
+                                // isolation work. Mirrors the personal app.
+                                { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Leg Extensions', id: 'actual-leg-extensions', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Leg Extensions', id: 'actual-leg-extensions', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
                                 // Keep in step with JESSI_ANTERIOR_ORDER below —
                                 // this preset builds a FRESH coach-code install
                                 // while that list migrates an existing one, and
@@ -3513,14 +3517,18 @@
             'Shoulder Press',
             'Lateral Raises',
             'Overhead Tricep Extensions',
+            // Abs and quads moved up ahead of Tricep Extensions and the wrist
+            // pair (Aug 2026), so the big movements are done before the small
+            // isolation work rather than after it. Matches the personal app.
+            'Ab Crunches',
+            'Leg Extensions',
             'Tricep Extensions',
             // The wrist pair splits by anatomy: flexors here, extensors on
             // Posterior. They shared a day under Upper/Lower.
             'Reverse Wrist Curls',
             'Cable Wrist Curls',
-            'Ab Crunches',
-            'Leg Extensions',
-            // Quad-dominant, so it closes the anterior day.
+            // Quad-dominant, and still the last thing on the day even with Leg
+            // Extensions moved up ahead of the arm work.
             'Leg Press',
         ];
 
@@ -3656,7 +3664,13 @@
         // `categories` to Anterior/Posterior, which is why the two legacy
         // one-shots above now bail out on any config carrying a splitRevision:
         // their Jessi-shape detection keys on exactly those category names.
-        const JESSI_SPLIT_REVISION = 10;
+        //
+        // 11 moves Ab Crunches and Leg Extensions up the Anterior day, ahead of
+        // Tricep Extensions and the wrist pair, mirroring the personal app's
+        // config version 16. Same 21 movements, same days, only Anterior's order
+        // changes — a fifth pure reorder, so the bump is once more the entire
+        // delivery mechanism.
+        const JESSI_SPLIT_REVISION = 11;
 
         const jessiNorm = (s) => String(s || '').toLowerCase().trim();
 
