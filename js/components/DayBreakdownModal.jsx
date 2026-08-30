@@ -1,5 +1,6 @@
 
-        function DayBreakdownModal({ onClose, workoutHistory, currentDay, getCurrentExercises, getPreviousWorkout }) {
+        function DayBreakdownModal({ onClose, workoutHistory, currentDay, getCurrentExercises, getPreviousWorkout, foregroundAt }) {
+            const [showDetails, setShowDetails] = React.useState(false);
             // Find today's workout
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -127,6 +128,12 @@
             }).length;
             const totalCount = getCurrentExercises().length;
 
+            // Reconstructed from the per-exercise timestamps logExercise
+            // stamps. Null for any workout carrying none — every session logged
+            // before this shipped — and the whole block below is then left out
+            // rather than rendering a zero.
+            const timing = getSessionTiming(todayWorkout, foregroundAt);
+
             const date = new Date(todayWorkout.date);
             const formattedDate = date.toLocaleDateString('en-US', {
                 weekday: 'long',
@@ -153,6 +160,28 @@
                             </div>
                         </div>
 
+                        {timing && (
+                            <div style={{ marginBottom: '20px' }}>
+                                <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '10px' }}>
+                                    Time at the Gym
+                                </div>
+                                <div data-timing-total style={{ fontSize: '32px', fontWeight: '700', color: 'var(--accent)' }}>
+                                    {formatDuration(timing.totalSeconds)}
+                                </div>
+                            </div>
+                        )}
+
+                        {timing && (
+                            <button
+                                className="modal-btn"
+                                onClick={() => setShowDetails(!showDetails)}
+                                style={{ marginBottom: '12px' }}
+                            >
+                                {showDetails ? 'Hide Details' : 'View More Details'}
+                            </button>
+                        )}
+
+                        {timing && showDetails && <TimingDetails timing={timing} />}
 
                         <button className="modal-btn primary" onClick={onClose}>
                             Close

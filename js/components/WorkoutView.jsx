@@ -1,5 +1,5 @@
 
-        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors, prTracking, advancedPrTracking, minimalistPrTracking, repsDropdown, expandedWeightBreakdown, setExpandedWeightBreakdown, workoutHistory }) {
+        function WorkoutView({ currentDay, setCurrentDay, workoutData, loggedExercises, handleInputChange, getPreviousWorkout, logExercise, completeDay, celebration, getCurrentExercises, currentWeek, userBodyweight, schedule, exercisesByDay, fieldErrors, prTracking, advancedPrTracking, minimalistPrTracking, repsDropdown, expandedWeightBreakdown, openWeightBreakdown, workoutHistory }) {
             const exercises = getCurrentExercises();
 
             // Group exercises by category dynamically
@@ -839,7 +839,7 @@
                             {hasGympinBreakdown && (
                                 <button
                                     data-gympin-breakdown-button={exercise.id}
-                                    onClick={() => setExpandedWeightBreakdown(isGympinExpanded ? null : exercise.id)}
+                                    onClick={() => openWeightBreakdown(exercise.id)}
                                     style={{
                                         padding: '6px 12px',
                                         fontSize: '12px',
@@ -852,7 +852,7 @@
                                         whiteSpace: 'nowrap'
                                     }}
                                 >
-                                    {isGympinExpanded ? 'Hide' : 'Weight Breakdown'}
+                                    Weight Breakdown
                                 </button>
                             )}
                         </div>
