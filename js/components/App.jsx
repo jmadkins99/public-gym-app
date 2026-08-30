@@ -939,7 +939,6 @@
                         setPrTracking(false);
                         setAdvancedPrTracking(false);
                         setMinimalistPrTracking(false);
-                        setGympinMode(false);
                         setRepsDropdown(null);
                         setShowSettings(false);
                         setShowWizard(true); // Show wizard after reset
@@ -1063,7 +1062,6 @@
                         </div>
                     )}
                     {showSuccess && <div className={`success-message ${showBackupReminder ? 'backup-reminder' : ''}`}>{successMessage}</div>}
-                    {celebration && <Celebration />}
 
                     {showBackupReminder && (
                         <BackupReminderModal
