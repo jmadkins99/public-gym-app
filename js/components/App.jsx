@@ -140,6 +140,10 @@
                 };
             }, []);
 
+            // See syncKeyboardChrome in utils.js. No dependency array on
+            // purpose: the class must not be able to outlive the field.
+            useEffect(() => { syncKeyboardChrome(); });
+
             // Keep --vvh on <html> equal to the VISUAL viewport height, which is
             // what the app shell is sized to.
             //

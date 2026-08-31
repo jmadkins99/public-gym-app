@@ -77,6 +77,11 @@
             React.useEffect(() => {
                 setIndex(0); setOffset(0); closeWeightBreakdown();
             }, [currentDay]);
+            // The deck's index is its own state, so a card change re-renders
+            // this and not App — and a card change is exactly when a focused
+            // weight field gets unmounted. See syncKeyboardChrome in utils.js.
+            React.useEffect(() => { syncKeyboardChrome(); });
+
             React.useEffect(() => () => {
                 cancelAnimationFrame(raf.current);
                 cancelAnimationFrame(paintFrame.current);
@@ -92,6 +97,15 @@
             // signal — where you landed is what the counter is for.
             const goTo = (target, dir) => {
                 if (target === index) { setOffset(0); return; }
+
+                // Leaving a card puts the keyboard away. The field you were
+                // typing into is about to be unmounted, and a focused element
+                // that is removed does not reliably report the fact — so blur
+                // it while it still exists rather than finding out afterwards.
+                const active = document.activeElement;
+                if (active && active.matches && active.matches('input, textarea')) {
+                    active.blur();
+                }
 
                 // Leaving an open card closes it. Walking back to a machine
                 // should start a fresh clock rather than resume a stale one,

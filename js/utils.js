@@ -303,3 +303,22 @@
             if (named) return named.category;
             return workout.day ? `Day ${workout.day}` : '';
         }
+
+        // `kb-open` on <html> means a text field has focus; the CSS uses it to
+        // step the day pills and the deck footer aside for the keyboard. The
+        // class is added on focusin and removed on focusout — but focusout is
+        // NOT dispatched reliably when the focused element is REMOVED from the
+        // document. Chromium sends it, Firefox does not, and the setup wizard
+        // unmounts with its coach-code input still focused. The class then
+        // stuck for the rest of the session and the workout screen looked
+        // half-loaded until a refresh.
+        //
+        // So the truth is re-derived rather than remembered: whenever anything
+        // renders, if nothing is focused the class comes off. Callers invoke
+        // this from an effect with no dependency array, because a render is the
+        // one thing that reliably happens when the focused node goes away.
+        function syncKeyboardChrome() {
+            const el = document.activeElement;
+            const focused = !!el && el.matches && el.matches('input, textarea');
+            if (!focused) document.documentElement.classList.remove('kb-open');
+        }
