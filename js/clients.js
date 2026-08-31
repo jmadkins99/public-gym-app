@@ -94,8 +94,6 @@
                                 { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Leg Extensions', id: 'actual-leg-extensions', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 // Keep in step with JESSI_ANTERIOR_ORDER below —
                                 // this preset builds a FRESH coach-code install
                                 // while that list migrates an existing one, and
@@ -114,6 +112,12 @@
                                 { name: 'Transverse Plane Rows', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Preacher Curls', id: 'actual-preacher-curls', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
+                                // The wrist pair sits with the pulling work
+                                // rather than the pressing work (Aug 2026),
+                                // matching the personal app's config
+                                // version 18.
+                                { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8 },
                                 { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },

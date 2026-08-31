@@ -138,10 +138,6 @@
             'Ab Crunches',
             'Leg Extensions',
             'Tricep Extensions',
-            // The wrist pair splits by anatomy: flexors here, extensors on
-            // Posterior. They shared a day under Upper/Lower.
-            'Reverse Wrist Curls',
-            'Cable Wrist Curls',
             // Quad-dominant, and still the last thing on the day even with Leg
             // Extensions moved up ahead of the arm work.
             'Leg Press',
@@ -156,6 +152,10 @@
             'Transverse Plane Rows',
             'Kelso Shrugs',
             'Preacher Curls',
+            // Moved off Anterior (Aug 2026) to sit with the pulling work,
+            // matching the personal app's config version 18.
+            'Reverse Wrist Curls',
+            'Cable Wrist Curls',
             'Back Extensions',
             // Adductor magnus is a hip extensor, hence the posterior chain.
             'Hip Adduction',
@@ -250,7 +250,14 @@
         // config version 16. Same 21 movements, same days, only Anterior's order
         // changes — a fifth pure reorder, so the bump is once more the entire
         // delivery mechanism.
-        const JESSI_SPLIT_REVISION = 11;
+        //
+        // 12 moves the wrist pair off Anterior and onto Posterior, straight
+        // after Preacher Curls, mirroring the personal app's config version
+        // 18. Same 21 movements and no renames — a movement changes DAY here
+        // rather than just position, which the other reorders never did, so
+        // this is the first bump where a client who has already trained the
+        // week sees two movements appear on a day they were not on.
+        const JESSI_SPLIT_REVISION = 12;
 
         const jessiNorm = (s) => String(s || '').toLowerCase().trim();
 
