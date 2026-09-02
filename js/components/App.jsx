@@ -625,6 +625,7 @@
 
             const logExercise = (exerciseId) => {
                 const exercise = getCurrentExercises().find(e => e.id === exerciseId);
+                if (!exercise) return { logged: false, isPR: false };
                 let data = workoutData[exerciseId] || {};
 
                 // Capture the reps dropdown's pre-selected value when the user
@@ -669,19 +670,19 @@
                     // If there are validation errors, set them and return
                     if (Object.keys(errors).length > 0) {
                         setFieldErrors(errors);
-                        return;
+                        return { logged: false, isPR: false };
                     }
                 }
 
-                if (exercise.type === 'assault-bike' && !data.rounds) return;
-                if (exercise.type === 'stairmaster' && !data.time) return;
-                if (exercise.type === 'bodyweight' && !data.reps) return;
+                if (exercise.type === 'assault-bike' && !data.rounds) return { logged: false, isPR: false };
+                if (exercise.type === 'stairmaster' && !data.time) return { logged: false, isPR: false };
+                if (exercise.type === 'bodyweight' && !data.reps) return { logged: false, isPR: false };
                 if (exercise.isCardio || exercise.typeId === 'cardio') {
                     // Check if minutes is filled (required)
                     if (!data.minutes || data.minutes === 0) {
                         errors[`${exerciseId}-minutes`] = true;
                         setFieldErrors(errors);
-                        return;
+                        return { logged: false, isPR: false };
                     }
 
                     // For intensity, check if there's a default available (from previous workout or exercise config)
@@ -689,7 +690,7 @@
                     const hasIntensity = (data.intensity && data.intensity.trim()) ||
                                         (previous && previous.intensity && previous.intensity.trim()) ||
                                         (exercise.intensity && exercise.intensity.trim());
-                    if (!hasIntensity) return;
+                    if (!hasIntensity) return { logged: false, isPR: false };
                 }
 
                 let finalData = { ...data };
@@ -798,6 +799,7 @@
                 exerciseToSave = { ...exerciseToSave, ...stamps };
 
                 let updatedHistory;
+                let savedWorkout;
                 if (existingWorkoutIndex !== -1) {
                     // Update existing workout
                     updatedHistory = [...workoutHistory];
@@ -811,6 +813,7 @@
                     }
 
                     workout.date = timestamp; // Update to latest timestamp
+                    savedWorkout = workout;
                 } else {
                     // Create new workout with all exercises initialized to NA
                     const allExercises = getCurrentExercises().map(ex => {
@@ -878,7 +881,10 @@
                     };
 
                     updatedHistory = [newWorkout, ...workoutHistory];
+                    savedWorkout = newWorkout;
                 }
+
+                const isPR = isExercisePRInWorkout(exerciseToSave, savedWorkout, updatedHistory);
 
                 setWorkoutHistory(updatedHistory);
                 window.repo.saveHistory(updatedHistory);
@@ -907,6 +913,8 @@
                 setSuccessMessage('Exercise logged!');
                 setShowSuccess(true);
                 setTimeout(() => setShowSuccess(false), 2000);
+
+                return { logged: true, isPR };
             };
 
             const completeDay = () => {

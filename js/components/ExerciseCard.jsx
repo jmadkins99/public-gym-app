@@ -8,6 +8,7 @@
         // exactly; the PR helpers it calls now live in js/plateauLogic.js.
         function ExerciseCard({ exercise,
                                 isRevealed,
+                                isCelebrating,
                                 getPreviousWorkout,
                                 loggedExercises,
                                 workoutData,
@@ -92,6 +93,32 @@
                 );
             }
 
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const loggedWorkout = isLogged ? workoutHistory.find(w => {
+                if (w.submitted) return false;
+                const workoutDate = new Date(w.date);
+                workoutDate.setHours(0, 0, 0, 0);
+                return workoutDate.getTime() === today.getTime() && w.exercises &&
+                    w.exercises.some(e => e.id === exercise.id && e.loggedAt);
+            }) : null;
+            const loggedExercise = loggedWorkout?.exercises.find(e => e.id === exercise.id);
+            const loggedPR = isLogged && isExercisePRInWorkout(loggedExercise, loggedWorkout, workoutHistory);
+            const cardClass = 'card card-open exercise-card' +
+                (isLogged ? ' logged' : '') +
+                (isCelebrating ? ' pr-celebrating' : '');
+            const loggedPRBadge = () => loggedPR ? (
+                <div className="streak-badge logged-pr-badge" data-logged-pr-badge>
+                    🔥 PR
+                </div>
+            ) : null;
+            const exerciseNameWithLoggedPR = (className = 'exercise-name card-open-name') => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                    <div className={className}>{exercise.name}</div>
+                    {loggedPRBadge()}
+                </div>
+            );
+
             // Check for PR tracking recommendations (only for standard exercises when prTracking is enabled)
             const prRecommendation = prTracking && !isLogged && (exercise.type === 'standard' || (!exercise.type && !exercise.isCardio && exercise.typeId !== 'cardio'))
                 ? getPRTrackingRecommendation(exercise.id, workoutHistory)
@@ -106,9 +133,9 @@
             const showMinimalistPR = minimalistPrTracking && !isLogged && isStandardOrBw;
             const minimalistPR = showMinimalistPR ? getMinimalistPR(exercise.id, workoutHistory) : null;
             const minimalistStagnation = showMinimalistPR && !minimalistPR ? getMinimalistStagnation(exercise.id, workoutHistory) : null;
-            // No !isLogged here, unlike the hints above: the streak reports
-            // history rather than suggesting a target, so it should stay put
-            // once the card is logged.
+            // Computed from submitted history, but rendered only before LOG:
+            // once a card is in today's logged-review state, a current-session
+            // PR badge replaces the stale numeric streak if this set improved.
             const prStreak = minimalistPrTracking && isStandardOrBw ? getPRStreak(exercise.id, workoutHistory) : null;
             const showPlateauBuster = showAdvancedPR ? isPlateauBuster(exercise.id, workoutHistory) : false;
             const advPrWeightRecovery = showAdvancedPR ? getPRWeightRecovery(exercise.id, workoutHistory) : null;
@@ -127,14 +154,12 @@
 
                 return (
                     <div data-exercise-id={exercise.id}
-                         className={`card card-open exercise-card ${isLogged ? 'logged' : ''}`}>
+                         className={cardClass}>
                         <div className="card-body" ref={fitBox}>
                           <div className="card-fit" ref={fitInner} style={{ transform: 'scale(' + fit + ')' }}>
                         <div className="exercise-header">
                             <div>
-                                <div className="exercise-name card-open-name">
-                                    {exercise.name}
-                                </div>
+                                {exerciseNameWithLoggedPR()}
                                 {(exercise.sets || exercise.minReps || exercise.maxReps) && (
                                     <div style={{ fontSize: '12px', color: 'var(--accent-pale)', marginTop: '4px', fontStyle: 'italic' }}>
                                         Goal: {exercise.sets || 3} sets × {exercise.minReps || 8}-{exercise.maxReps || 12} reps
@@ -211,14 +236,12 @@
 
                 return (
                     <div data-exercise-id={exercise.id}
-                         className={`card card-open exercise-card ${isLogged ? 'logged' : ''}`}>
+                         className={cardClass}>
                         <div className="card-body" ref={fitBox}>
                           <div className="card-fit" ref={fitInner} style={{ transform: 'scale(' + fit + ')' }}>
                         <div className="exercise-header">
                             <div>
-                                <div className="exercise-name card-open-name">
-                                    {exercise.name}
-                                </div>
+                                {exerciseNameWithLoggedPR()}
                                 {(exercise.sets || exercise.minReps || exercise.maxReps) && (
                                     <div style={{ fontSize: '12px', color: 'var(--accent-pale)', marginTop: '4px', fontStyle: 'italic' }}>
                                         Goal: {exercise.sets || 3} sets × {exercise.minReps || 8}-{exercise.maxReps || 12} reps
@@ -298,12 +321,12 @@
 
                 return (
                     <div data-exercise-id={exercise.id}
-                         className={`card card-open exercise-card ${isLogged ? 'logged' : ''}`}>
+                         className={cardClass}>
                         <div className="card-body" ref={fitBox}>
                           <div className="card-fit" ref={fitInner} style={{ transform: 'scale(' + fit + ')' }}>
                         <div className="exercise-header">
                             <div>
-                                <div className="exercise-name card-open-name">{exercise.name}</div>
+                                {exerciseNameWithLoggedPR()}
                                 {(exercise.sets || exercise.minReps || exercise.maxReps) && (
                                     <div style={{ fontSize: '12px', color: 'var(--accent-pale)', marginTop: '4px', fontStyle: 'italic' }}>
                                         Goal: {exercise.sets || 3} sets × {exercise.minReps || 8}-{exercise.maxReps || 12} reps
@@ -381,14 +404,12 @@
 
                 return (
                     <div data-exercise-id={exercise.id}
-                         className={`card card-open exercise-card ${isLogged ? 'logged' : ''}`}>
+                         className={cardClass}>
                         <div className="card-body" ref={fitBox}>
                           <div className="card-fit" ref={fitInner} style={{ transform: 'scale(' + fit + ')' }}>
                         <div className="exercise-header">
                             <div>
-                                <div className="exercise-name card-open-name">
-                                    {exercise.name}
-                                </div>
+                                {exerciseNameWithLoggedPR()}
                                 {previous && (
                                     <div style={{ fontSize: '12px', color: 'var(--accent-pale)', marginTop: '4px', fontStyle: 'italic' }}>
                                         Goal: {previous.intensity || 'Any intensity'} - {previous.minutes || 0}:{String(previous.seconds || 0).padStart(2, '0')}
@@ -626,14 +647,15 @@
 
             return (
                 <div data-exercise-id={exercise.id}
-                     className={`card card-open exercise-card ${isLogged ? 'logged' : ''}`}>
+                     className={cardClass}>
                     <div className="card-open-head">
                         <div className="exercise-name card-open-name">{exercise.name}</div>
+                        {loggedPRBadge()}
                         {isLogged ? <div className="logged-chip">logged</div> : null}
                         {/* Sibling of .exercise-name, never a child: a pile of
                             tests compare that node's textContent to the bare
                             exercise name. */}
-                        {prStreak ? (
+                        {!isLogged && prStreak ? (
                             <div className="streak-badge" data-streak={prStreak}>🔥 {prStreak}</div>
                         ) : null}
                     </div>

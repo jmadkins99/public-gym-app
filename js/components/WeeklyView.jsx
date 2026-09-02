@@ -62,7 +62,6 @@
                                 const allExercises = (exercisesByDay[workout.day] && exercisesByDay[workout.day].length > 0)
                                     ? exercisesByDay[workout.day]
                                     : (workout.exercises || []);
-                                const completedIds = new Set(workout.exercises.map(e => e.id));
 
                                 // Calculate sequential day number (total workouts completed)
                                 const workoutIndex = workoutHistory.indexOf(workout);
@@ -98,9 +97,24 @@
                                         </div>
                                         {allExercises.map((expectedExercise) => {
                                             const completedExercise = workout.exercises.find(e => e.id === expectedExercise.id);
+                                            // Not gated on workout.submitted: today's in-progress
+                                            // entry is already in this list, and the badge should
+                                            // land the moment the set is logged. Safe because the
+                                            // baseline isExercisePRInWorkout compares against is
+                                            // always a SUBMITTED session older than this one, so
+                                            // the answer cannot change when the day is submitted.
+                                            const isPR = completedExercise &&
+                                                isExercisePRInWorkout(completedExercise, workout, workoutHistory);
                                             return (
                                                 <div key={expectedExercise.id} className="history-exercise">
-                                                    <div className="history-exercise-name">{expectedExercise.name}</div>
+                                                    <div className="history-exercise-title">
+                                                        <div className="history-exercise-name">{expectedExercise.name}</div>
+                                                        {isPR ? (
+                                                            <div className="streak-badge history-pr-badge" data-pr-badge>
+                                                                🔥 PR
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
                                                     <div className="history-exercise-data">
                                                         {completedExercise ? (
                                                             completedExercise.type === 'assault-bike'

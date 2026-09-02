@@ -147,9 +147,114 @@
         // calling a streak, and the baseline it beat is not counted.
         const PR_STREAK_MIN = 1;
 
+        function getPRKind(exercise) {
+            if (!exercise) return null;
+            if (exercise.type === 'assault-bike') return 'assault-bike';
+            if (exercise.type === 'stairmaster') return 'stairmaster';
+            if (exercise.type === 'bodyweight') return 'bodyweight';
+            if (exercise.isCardio || exercise.type === 'cardio' || exercise.typeId === 'cardio') return 'cardio';
+            return 'standard';
+        }
+
+        const parsePositiveInt = (value) => {
+            const parsed = parseInt(value);
+            return isNaN(parsed) ? null : parsed;
+        };
+
+        const parsePositiveFloat = (value) => {
+            const parsed = parseFloat(value);
+            return isNaN(parsed) ? null : parsed;
+        };
+
+        const cardioSeconds = (exercise) =>
+            ((parseInt(exercise?.minutes) || 0) * 60) + (parseInt(exercise?.seconds) || 0);
+
+        function hasComparablePRData(exercise, kind = getPRKind(exercise)) {
+            if (!exercise) return false;
+
+            if (kind === 'assault-bike') {
+                return parsePositiveInt(exercise.rounds) !== null;
+            }
+
+            if (kind === 'stairmaster') {
+                const seconds = parseTimeToSeconds(exercise.time);
+                return !isNaN(seconds) && seconds > 0;
+            }
+
+            if (kind === 'cardio') {
+                return cardioSeconds(exercise) > 0;
+            }
+
+            if (kind === 'bodyweight') {
+                return exercise.reps && exercise.reps !== 'NA' &&
+                    parsePositiveInt(exercise.reps) !== null;
+            }
+
+            return exercise.weight && exercise.weight !== 'NA' &&
+                exercise.reps && exercise.reps !== 'NA' &&
+                parsePositiveFloat(exercise.weight) !== null &&
+                parsePositiveInt(exercise.reps) !== null;
+        }
+
+        function isImprovement(newer, older, kind = getPRKind(newer)) {
+            if (!hasComparablePRData(newer, kind) || !hasComparablePRData(older, kind)) return false;
+
+            if (kind === 'assault-bike') {
+                return parsePositiveInt(newer.rounds) > parsePositiveInt(older.rounds);
+            }
+
+            if (kind === 'stairmaster') {
+                return parseTimeToSeconds(newer.time) > parseTimeToSeconds(older.time);
+            }
+
+            if (kind === 'cardio') {
+                return cardioSeconds(newer) > cardioSeconds(older);
+            }
+
+            if (kind === 'bodyweight') {
+                return parsePositiveInt(newer.reps) > parsePositiveInt(older.reps);
+            }
+
+            const newWeight = parsePositiveFloat(newer.weight);
+            const oldWeight = parsePositiveFloat(older.weight);
+            const newReps = parsePositiveInt(newer.reps);
+            const oldReps = parsePositiveInt(older.reps);
+
+            if (newWeight > oldWeight) return true;
+            if (newWeight < oldWeight) return false;
+            return newReps > oldReps;
+        }
+
+        function getPreviousSubmittedExerciseForPR(exerciseId, workoutHistory, beforeDate, kind) {
+            const cutoff = new Date(beforeDate);
+            const sortedWorkouts = (workoutHistory || [])
+                .filter(w => {
+                    if (!w.submitted) return false;
+                    return new Date(w.date) < cutoff;
+                })
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            for (const workout of sortedWorkouts) {
+                const exercise = workout.exercises && workout.exercises.find(e => e.id === exerciseId);
+                if (hasComparablePRData(exercise, kind)) return exercise;
+            }
+
+            return null;
+        }
+
+        function isExercisePRInWorkout(exercise, workout, workoutHistory) {
+            if (!exercise || !workout || !workoutHistory) return false;
+
+            const kind = getPRKind(exercise);
+            if (!hasComparablePRData(exercise, kind)) return false;
+
+            const previous = getPreviousSubmittedExerciseForPR(exercise.id, workoutHistory, workout.date, kind);
+            return !!previous && isImprovement(exercise, previous, kind);
+        }
+
         // The mirror image of getMinimalistStagnation: how many consecutive
         // times this lift has moved *forward*. Same history walk, no slice —
-        // a streak has no ceiling. Renders as the green flame pill in the
+        // a streak has no ceiling. Renders as the gold-outline flame pill in the
         // exercise header.
         //
         // It counts improvements, not sessions: the oldest session in the
@@ -190,25 +295,10 @@
 
             const entries = sessions.map(w => w.exercises.find(e => e.id === exerciseId));
 
-            // Non-numeric weights can't be compared. This guard is load-
-            // bearing here in a way it isn't on the personal app: the card
-            // gate is isStandardOrBw, which lets bodyweight rows ('Body
-            // Weight' in the weight field) reach this comparison.
-            const extendsStreak = (newer, older) => {
-                const newWeight = parseFloat(newer.weight);
-                const oldWeight = parseFloat(older.weight);
-                const newReps = parseInt(newer.reps);
-                const oldReps = parseInt(older.reps);
-                if ([newWeight, oldWeight, newReps, oldReps].some(isNaN)) return false;
-                if (newWeight > oldWeight) return true;
-                if (newWeight < oldWeight) return false;
-                return newReps > oldReps;
-            };
-
             // Starts at 0: one session on its own is a baseline, not a gain.
             let streak = 0;
             for (let i = 0; i + 1 < entries.length; i++) {
-                if (!extendsStreak(entries[i], entries[i + 1])) break;
+                if (!isImprovement(entries[i], entries[i + 1], getPRKind(entries[i]))) break;
                 streak++;
             }
 
