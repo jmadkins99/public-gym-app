@@ -37,6 +37,15 @@
             // dropdown of that inclusive range. null = free-type (everyone else).
             const [repsDropdown, setRepsDropdown] = useState(null);
             const [expandedWeightBreakdown, setExpandedWeightBreakdown] = useState(null);
+            // Which card the deck is parked on. It lives up here for the same
+            // reason expandedWeightBreakdown does: SwipeDeck is unmounted while
+            // History is on screen, so anything it holds itself is gone by the
+            // time you come back. Keeping the position and the open panel
+            // together is what makes a trip to History a detour rather than a
+            // restart - you look something up, you come back, the card you were
+            // standing at is still open in front of you, its clock still
+            // running.
+            const [deckIndex, setDeckIndex] = useState(0);
 
             // When each exercise's Weight Breakdown panel was opened today,
             // keyed by id — the start half of every movement's clock.
@@ -1342,6 +1351,8 @@
                             closeWeightBreakdown={(id) => setExpandedWeightBreakdown(
                                 (cur) => (id === undefined || cur === id ? null : cur))}
                             workoutHistory={workoutHistory}
+                            deckIndex={deckIndex}
+                            setDeckIndex={setDeckIndex}
                             foregroundAt={lastForegroundAt}
                         />}
                         {currentView === 'weekly' && <WeeklyView
