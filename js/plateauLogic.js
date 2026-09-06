@@ -124,7 +124,6 @@
                     workoutDate.setHours(0, 0, 0, 0);
                     if (workoutDate > today) return false;
                     if (workoutDate.getTime() === today.getTime() && !w.submitted) return false;
-                    if (!w.submitted) return false;
                     const exercise = w.exercises.find(e => e.id === exerciseId);
                     if (!exercise) return false;
                     if (!exercise.reps || !exercise.weight) return false;
@@ -225,13 +224,34 @@
             return newReps > oldReps;
         }
 
-        function getPreviousSubmittedExerciseForPR(exerciseId, workoutHistory, beforeDate, kind) {
+        // The most recent session before `beforeDate` that actually logged this
+        // movement - the thing every PR verdict is measured against.
+        //
+        // Submit Day is deliberately NOT a condition here. It is a ceremony the
+        // user performs, not a property of the training: a day whose sets were
+        // logged and then left unsubmitted still happened, and the weight on the
+        // bar does not care. Gating on it cost the personal app a real session
+        // in September 2026 - a day logged in full, never submitted, so the next
+        // session was scored against the one before it and took a PR badge for
+        // repeating a set it had already done.
+        //
+        // Nothing else here gated on it either: getPreviousExercise in App feeds
+        // the "last session" line and pre-fills the weight input from those days
+        // already, so this lookup was the odd one out. One history, one set of
+        // sessions, for the suggestion and the verdict alike.
+        //
+        // The cost, named so it is not met by surprise: a day abandoned with a
+        // stray number in it now suppresses a real PR until that row is edited
+        // or the day deleted. That is visible and fixable. The failure it
+        // replaces was silent.
+        //
+        // Today's own in-progress record cannot slip in as its own baseline:
+        // `beforeDate` is the caller's workout date, and a day only ever holds a
+        // second record once the first has been submitted.
+        function getPreviousExerciseForPR(exerciseId, workoutHistory, beforeDate, kind) {
             const cutoff = new Date(beforeDate);
             const sortedWorkouts = (workoutHistory || [])
-                .filter(w => {
-                    if (!w.submitted) return false;
-                    return new Date(w.date) < cutoff;
-                })
+                .filter(w => new Date(w.date) < cutoff)
                 .sort((a, b) => new Date(b.date) - new Date(a.date));
 
             for (const workout of sortedWorkouts) {
@@ -248,7 +268,7 @@
             const kind = getPRKind(exercise);
             if (!hasComparablePRData(exercise, kind)) return false;
 
-            const previous = getPreviousSubmittedExerciseForPR(exercise.id, workoutHistory, workout.date, kind);
+            const previous = getPreviousExerciseForPR(exercise.id, workoutHistory, workout.date, kind);
             return !!previous && isImprovement(exercise, previous, kind);
         }
 
@@ -282,7 +302,6 @@
                     workoutDate.setHours(0, 0, 0, 0);
                     if (workoutDate > today) return false;
                     if (workoutDate.getTime() === today.getTime() && !w.submitted) return false;
-                    if (!w.submitted) return false;
                     const exercise = w.exercises.find(e => e.id === exerciseId);
                     if (!exercise) return false;
                     if (!exercise.reps || !exercise.weight) return false;
