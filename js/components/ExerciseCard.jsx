@@ -131,7 +131,7 @@
 
             // Minimalist PR tracking (Jessi, and anyone else opted in via minimalistPrTracking)
             const showMinimalistPR = minimalistPrTracking && !isLogged && isStandardOrBw;
-            const minimalistPR = showMinimalistPR ? getMinimalistPR(exercise.id, workoutHistory) : null;
+            const minimalistPR = showMinimalistPR ? getMinimalistPR(exercise, workoutHistory) : null;
             const minimalistStagnation = showMinimalistPR && !minimalistPR ? getMinimalistStagnation(exercise.id, workoutHistory) : null;
             // Computed from submitted history, but rendered only before LOG:
             // once a card is in today's logged-review state, a current-session
@@ -142,9 +142,9 @@
             const advFailedRetry = showAdvancedPR && !advPrWeightRecovery
                 ? getFailedPlateauBusterRetry(exercise.id, workoutHistory) : null;
             const advAutoRegulation = showAdvancedPR && !advPrWeightRecovery && !advFailedRetry && exercise.type !== 'bodyweight'
-                ? getPRAutoRegulation(exercise.id, workoutHistory) : null;
+                ? getPRAutoRegulation(exercise, workoutHistory) : null;
             const advPlateauDecrement = showAdvancedPR && showPlateauBuster && !advPrWeightRecovery && exercise.type !== 'bodyweight'
-                ? getPlateauBusterDecrement(exercise.id, workoutHistory) : null;
+                ? getPlateauBusterDecrement(exercise, workoutHistory) : null;
 
             if (exercise.type === 'assault-bike') {
                 const isPROpportunity = previous && previous.rounds;

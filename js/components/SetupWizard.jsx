@@ -155,6 +155,9 @@
                                     // name-based rules would guess wrong about.
                                     // Omitted leaves resolveLoadType to guess.
                                     ...(ex.loadType ? { loadType: ex.loadType } : {}),
+                                    // Likewise the PR step, for a machine that
+                                    // moves by more than the 2.5 default.
+                                    ...(ex.increment ? { increment: ex.increment } : {}),
                                     order: idx
                                 };
                             }

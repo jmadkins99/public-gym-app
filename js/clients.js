@@ -78,49 +78,48 @@
                     splitRevision: JESSI_SPLIT_REVISION,
                     workoutDays: {
 
+                        // Revision 13 (Sep 2026): the personal app's config
+                        // version 20, name for name and in the same order.
+                        // Every movement names its machine's loadType rather
+                        // than leaving it to the name guesses, four of which
+                        // are wrong for this gym (Shoulder Flexion Curls,
+                        // Sagittal Plane Pullovers, Back Extensions, Frontal
+                        // Plane Pulldowns). Keep in step with
+                        // JESSI_ANTERIOR_ORDER / JESSI_POSTERIOR_ORDER and
+                        // JESSI_REV13_MACHINES in migrations.jessi.js — this
+                        // preset builds a FRESH coach-code install while those
+                        // migrate an existing one. Test 33 pins them together.
                         1: {
                             name: 'Anterior',
                             exercises: [
-                                { name: 'Chest Press', id: 'chest-press', startingWeight: '100', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Incline Chest Press', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Lateral Raises', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Overhead Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
-                                // Abs and quads moved up ahead of Tricep
-                                // Extensions and the wrist pair (Aug 2026), so
-                                // the big movements come before the small
-                                // isolation work. Mirrors the personal app.
-                                { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Leg Extensions', id: 'actual-leg-extensions', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Tricep Extensions', sets: 1, minReps: 6, maxReps: 8 },
-                                // Keep in step with JESSI_ANTERIOR_ORDER below —
-                                // this preset builds a FRESH coach-code install
-                                // while that list migrates an existing one, and
-                                // the two must agree. Test 33 pins them to each
-                                // other; a reorder applied to only one fails it.
-                                { name: 'Leg Press', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Tricep Extensions', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Chest Press', id: 'chest-press', startingWeight: '100', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Incline Chest Press', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Lateral Raises', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Overhead Tricep Extensions', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Leg Press', sets: 1, minReps: 6, maxReps: 8, loadType: 'plate-two-sided', increment: 5 },
+                                { name: 'Leg Extensions', id: 'actual-leg-extensions', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
                             ]
                         },
 
                         2: {
                             name: 'Posterior',
                             exercises: [
-                                { name: 'Recline Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Sagittal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Transverse Plane Rows', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Preacher Curls', id: 'actual-preacher-curls', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8 },
-                                // The wrist pair sits with the pulling work
-                                // rather than the pressing work (Aug 2026),
-                                // matching the personal app's config
-                                // version 18.
-                                { name: 'Reverse Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Cable Wrist Curls', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8 },
-                                { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8 },
+                                { name: 'Recline Curls', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                // Was Preacher Curls; the id is unchanged.
+                                { name: 'Shoulder Flexion Curls', id: 'actual-preacher-curls', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                // Was Sagittal Plane Pulldowns.
+                                { name: 'Sagittal Plane Pullovers', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Transverse Plane Rows', sets: 1, minReps: 6, maxReps: 8, loadType: 'plate-one-sided' },
+                                { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8, loadType: 'plate-one-sided' },
+                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8, loadType: 'plate-one-sided' },
+                                { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin', increment: 5 },
+                                { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                // 2.5 here, unlike the personal app's 5.
+                                { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
                             ]
                         }
 

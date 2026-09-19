@@ -125,44 +125,39 @@
         // 12 Anterior, 9 Posterior — the push side carries more volume on
         // purpose.
 
+        // Revision 13 (Sep 2026) matches the personal app's config version 20
+        // name for name and in the same order.
         const JESSI_ANTERIOR_ORDER = [
+            'Tricep Extensions',
             'Chest Press',
             'Incline Chest Press',
             'Chest Flies',
             'Shoulder Press',
             'Lateral Raises',
             'Overhead Tricep Extensions',
-            // Abs and quads moved up ahead of Tricep Extensions and the wrist
-            // pair (Aug 2026), so the big movements are done before the small
-            // isolation work rather than after it. Matches the personal app.
             'Ab Crunches',
-            'Leg Extensions',
-            'Tricep Extensions',
-            // Quad-dominant, and still the last thing on the day even with Leg
-            // Extensions moved up ahead of the arm work.
             'Leg Press',
+            'Leg Extensions',
         ];
 
         const JESSI_POSTERIOR_ORDER = [
             // Biceps are grouped with the pulling work rather than with the
             // other arm movements.
             'Recline Curls',
-            'Frontal Plane Pulldowns',
-            'Sagittal Plane Pulldowns',
+            'Shoulder Flexion Curls',
+            'Sagittal Plane Pullovers',
             'Transverse Plane Rows',
             'Kelso Shrugs',
-            'Preacher Curls',
-            // Moved off Anterior (Aug 2026) to sit with the pulling work,
-            // matching the personal app's config version 18.
-            'Reverse Wrist Curls',
-            'Cable Wrist Curls',
+            'Frontal Plane Pulldowns',
             'Back Extensions',
             // Adductor magnus is a hip extensor, hence the posterior chain.
             'Hip Adduction',
             'Calf Raises',
         ];
 
-        // Four movements the June Full Body migration dropped, now returning.
+        // Movements the June Full Body migration dropped, now returning. There
+        // were four; the wrist pair came back in Aug 2026 and was retired again
+        // in revision 13, so only these two are still restored.
         // Each is matched against workoutHistory by the display name it had
         // back then so it can reclaim its ORIGINAL id. This matters: every
         // lookup in this app is `w.exercises.find(e => e.id === exerciseId)`,
@@ -171,16 +166,15 @@
         const JESSI_RESTORED = [
             { name: 'Overhead Tricep Extensions', historical: /\bdips?\b|weighted dip|overhead tricep/i },
             { name: 'Lateral Raises',             historical: /lateral raise/i },
-            { name: 'Reverse Wrist Curls',        historical: /reverse.*wrist/i },
-            { name: 'Cable Wrist Curls',          historical: /cable wrist/i },
         ];
 
         // Genuinely new movements — no id to reclaim and no history to inherit,
         // unlike JESSI_RESTORED above. Each id is a stable literal rather than a
         // UUID so the coach preset and this migration agree on one key.
-        //   - Preacher Curls: the existing "Recline Curls" IS the old Preacher
-        //     Curls, renamed by the June migration, so `preacher-curls` is spoken
-        //     for. Hence `actual-`.
+        //   - Shoulder Flexion Curls: added as "Preacher Curls" in Aug 2026 and
+        //     renamed in revision 13. The existing "Recline Curls" IS the old
+        //     Preacher Curls, renamed by the June migration, so `preacher-curls`
+        //     was spoken for. Hence `actual-`, which the rename keeps.
         //   - Leg Extensions: added Aug 2026, alongside the personal app, which
         //     hit the same collision (its `leg-extensions` id renders as Hip
         //     Adduction). Both apps share the one `actual-leg-extensions` literal.
@@ -192,7 +186,7 @@
         // would show up as a real session in the History tab, count toward PR
         // baselines and day totals, and sync a bogus doc to Firestore.
         const JESSI_NEW_EXERCISES = [
-            { id: 'actual-preacher-curls', name: 'Preacher Curls', startingWeight: '50' },
+            { id: 'actual-preacher-curls', name: 'Shoulder Flexion Curls', startingWeight: '50' },
             { id: 'actual-leg-extensions', name: 'Leg Extensions', startingWeight: '50' },
             // Added Aug 2026 alongside the personal app. No id collision in
             // either app, so both share the plain `chest-press` literal — no
@@ -257,7 +251,40 @@
         // rather than just position, which the other reorders never did, so
         // this is the first bump where a client who has already trained the
         // week sees two movements appear on a day they were not on.
-        const JESSI_SPLIT_REVISION = 12;
+        //
+        // 13 catches up with the personal app's config version 20, and is the
+        // first bump that does more than move movements around. It reorders
+        // both days, renames two movements (keeping their ids, so history
+        // follows), retires the wrist pair, and sets how four machines are
+        // loaded and the PR step on two of them. Those last three are one-time
+        // edits made on the way past 13, not rules re-applied on every load —
+        // see JESSI_REV13_* below.
+        const JESSI_SPLIT_REVISION = 13;
+
+        // Applied once, to a config crossing from below revision 13. Anything
+        // the client changes afterwards, in Settings or by adding a movement
+        // with one of these names, is theirs and a later bump leaves it alone.
+        //
+        // Renames: Preacher Curls is matched by its stable id, because
+        // "Preacher Curls" was also the June-era name of what is now Recline
+        // Curls and a name match could pick the wrong one on an old config.
+        const JESSI_REV13_RENAMES = [
+            { id: 'actual-preacher-curls', to: 'Shoulder Flexion Curls' },
+            { name: 'Sagittal Plane Pulldowns', to: 'Sagittal Plane Pullovers' },
+        ];
+        // Removed from the program. Their logged sessions stay in history.
+        const JESSI_REV13_RETIRED = ['Reverse Wrist Curls', 'Cable Wrist Curls'];
+        // The machines in the personal app's gym where the name guesses in
+        // plateConfig.js are wrong, and the two that move by 5 rather than
+        // 2.5. These overwrite a saved choice, once: the program is being
+        // re-pointed at the gym's actual machines.
+        const JESSI_REV13_MACHINES = {
+            'Shoulder Flexion Curls': { loadType: 'pin' },
+            'Sagittal Plane Pullovers': { loadType: 'pin' },
+            'Frontal Plane Pulldowns': { loadType: 'plate-one-sided' },
+            'Back Extensions': { loadType: 'pin', increment: 5 },
+            'Leg Press': { increment: 5 },
+        };
 
         const jessiNorm = (s) => String(s || '').toLowerCase().trim();
 
@@ -330,6 +357,21 @@
                 if (!JESSI_FULL_BODY_ORDER.every(n => present.has(jessiNorm(n)))) return null;
             }
 
+            // Revision 13's one-time edits, made before anything is matched by
+            // name so the new names are the ones the order lists find.
+            const crossing13 = !(config.splitRevision >= 13);
+            if (crossing13) {
+                const retired = new Set(JESSI_REV13_RETIRED.map(jessiNorm));
+                existing = existing
+                    .filter(e => !retired.has(jessiNorm(e.name)))
+                    .map(e => {
+                        const r = JESSI_REV13_RENAMES.find(r => r.id
+                            ? e.id === r.id
+                            : jessiNorm(e.name) === jessiNorm(r.name));
+                        return r ? { ...e, name: r.to } : e;
+                    });
+            }
+
             const byName = new Map(existing.map(e => [jessiNorm(e.name), e]));
             const recoveredIds = {};
 
@@ -351,7 +393,10 @@
 
             // Add the genuinely new movements.
             for (const spec of JESSI_NEW_EXERCISES) {
+                // By id as well as name: a stable id already in the program is
+                // that movement, whatever it is called now.
                 if (byName.has(jessiNorm(spec.name))) continue;
+                if (existing.some(e => e.id === spec.id)) continue;
                 byName.set(jessiNorm(spec.name), {
                     id: spec.id,
                     name: spec.name,
@@ -364,10 +409,11 @@
                 });
             }
 
+            const machine = (ex) => crossing13 ? { ...ex, ...JESSI_REV13_MACHINES[ex.name] } : ex;
             const take = (names, category) => names
                 .map(n => byName.get(jessiNorm(n)))
                 .filter(Boolean)
-                .map((ex, order) => ({ ...ex, category, order }));
+                .map((ex, order) => ({ ...machine(ex), category, order }));
 
             const anterior = take(JESSI_ANTERIOR_ORDER, 'Anterior');
             const posterior = take(JESSI_POSTERIOR_ORDER, 'Posterior');

@@ -9,6 +9,7 @@
             const [tempMinReps, setTempMinReps] = useState('');
             const [tempMaxReps, setTempMaxReps] = useState('');
             const [tempLoadType, setTempLoadType] = useState('pin');
+            const [tempIncrement, setTempIncrement] = useState('');
 
             const handleStartEdit = (exercise) => {
                 setEditingExercise(exercise.id);
@@ -21,15 +22,24 @@
                 // should open showing the guess it is currently being given
                 // rather than defaulting to the first option.
                 setTempLoadType(resolveLoadType(exercise));
+                // Likewise the step the card is using now, saved or default.
+                setTempIncrement(String(resolveIncrement(exercise)));
             };
 
-            const handleSaveEdit = (day, exerciseId) => {
+            const handleSaveEdit = (day, exercise) => {
                 if (tempName.trim()) {
-                    updateExerciseName(day, exerciseId, tempName.trim(), {
+                    // The increment is written only when it changed, so an
+                    // exercise nobody re-steps never grows the key and keeps
+                    // following the default.
+                    const increment = Number(tempIncrement);
+                    const incrementChanged = tempIncrement !== ''
+                        && increment !== resolveIncrement(exercise);
+                    updateExerciseName(day, exercise.id, tempName.trim(), {
                         sets: tempSets === '' ? '' : parseInt(tempSets) || 0,
                         minReps: tempMinReps === '' ? '' : parseInt(tempMinReps) || 0,
                         maxReps: tempMaxReps === '' ? '' : parseInt(tempMaxReps) || 0,
-                        loadType: tempLoadType
+                        loadType: tempLoadType,
+                        ...(incrementChanged ? { increment } : {})
                     });
                 }
                 setEditingExercise(null);
@@ -38,6 +48,7 @@
                 setTempMinReps('');
                 setTempMaxReps('');
                 setTempLoadType('pin');
+                setTempIncrement('');
             };
 
             const handleCancelEdit = () => {
@@ -46,6 +57,7 @@
                 setTempSets('');
                 setTempMinReps('');
                 setTempMaxReps('');
+                setTempIncrement('');
             };
 
             if (settingsView.startsWith('exercises-')) {
@@ -59,7 +71,7 @@
 
                             <div style={{ marginBottom: '20px' }}>
                                 {exercises.map((exercise, idx) => (
-                                    <div key={exercise.id} style={{
+                                    <div key={exercise.id} className="exercise-row" data-exercise-id={exercise.id} style={{
                                         background: '#1a1a2a',
                                         borderRadius: '8px',
                                         padding: '12px',
@@ -183,11 +195,49 @@
                                                             <option value="plate-two-sided">Plate-loaded on both sides</option>
                                                             <option value="plate-one-sided">Plate-loaded on one side</option>
                                                         </select>
+                                                        {/* The PR step, under the load type because the
+                                                            two interact: a two-sided machine doubles a step
+                                                            that will not split onto real plates, and the hint
+                                                            says so rather than letting the card disagree
+                                                            with this dropdown. Committed by Save, so Cancel
+                                                            undoes it. */}
+                                                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--accent-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                            PR Increment (lbs)
+                                                        </label>
+                                                        <select
+                                                            data-field="increment"
+                                                            value={tempIncrement}
+                                                            onChange={(e) => setTempIncrement(e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '8px',
+                                                                background: '#0d0d1a',
+                                                                border: '1px solid #2a2a3a',
+                                                                borderRadius: '4px',
+                                                                color: '#b8b8d0',
+                                                                fontSize: '14px',
+                                                                marginBottom: '12px',
+                                                                boxSizing: 'border-box'
+                                                            }}
+                                                        >
+                                                            {PR_INCREMENT_OPTIONS.map(step => (
+                                                                <option key={step} value={String(step)}>{step}</option>
+                                                            ))}
+                                                        </select>
+                                                        {(() => {
+                                                            const chosen = Number(tempIncrement);
+                                                            const effective = getWeightIncrement({ ...exercise, loadType: tempLoadType, increment: chosen });
+                                                            return effective !== chosen ? (
+                                                                <div data-field="increment-hint" style={{ color: '#8a8aa0', fontSize: '12px', marginTop: '-8px', marginBottom: '12px' }}>
+                                                                    Two-sided: suggests +{effective} lbs
+                                                                </div>
+                                                            ) : null;
+                                                        })()}
                                                     </>
                                                 )}
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     <button
-                                                        onClick={() => handleSaveEdit(day, exercise.id)}
+                                                        onClick={() => handleSaveEdit(day, exercise)}
                                                         style={{
                                                             flex: 1,
                                                             padding: '8px',

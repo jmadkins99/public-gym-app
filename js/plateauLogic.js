@@ -73,7 +73,10 @@
         // Mirrors the personal-app's simple mode: auto-increment when the last
         // session hit maxReps, plus a 3-session stagnation gold flag. No downweight.
 
-        function getMinimalistPR(exerciseId, workoutHistory) {
+        // Takes the exercise rather than its id so the step can read the
+        // client's saved `increment` (see resolveIncrement in plateConfig.js).
+        function getMinimalistPR(exerciseConfig, workoutHistory) {
+            const exerciseId = exerciseConfig.id;
             if (!workoutHistory || workoutHistory.length === 0) return null;
 
             const today = new Date();
@@ -103,7 +106,7 @@
             if (previousReps < previousExercise.maxReps) return null;
 
             const lastWeight = parseFloat(previousExercise.weight);
-            const increment = getPRWeightIncrement(previousExercise.name);
+            const increment = getWeightIncrement(exerciseConfig);
             return {
                 weight: (lastWeight + increment).toString(),
                 lastWeight: previousExercise.weight,
@@ -417,7 +420,8 @@
         }
 
         // PR Auto-Regulation: last session hit maxReps+ → bump weight up
-        function getPRAutoRegulation(exerciseId, workoutHistory) {
+        function getPRAutoRegulation(exerciseConfig, workoutHistory) {
+            const exerciseId = exerciseConfig.id;
             if (!workoutHistory || workoutHistory.length === 0) return null;
             const today = new Date(); today.setHours(0, 0, 0, 0);
             const previousWorkout = workoutHistory
@@ -435,7 +439,7 @@
             const previousEx = previousWorkout.exercises.find(e => e.id === exerciseId);
             if (!previousEx) return null;
             if (previousEx.reps && parseInt(previousEx.reps) >= (previousEx.maxReps || ADV_MAX_REPS) && previousEx.weight) {
-                const increment = getPRWeightIncrement(previousEx.name);
+                const increment = getWeightIncrement(exerciseConfig);
                 return {
                     weight: (parseFloat(previousEx.weight) + increment).toString(),
                     lastWeight: previousEx.weight,
@@ -448,7 +452,8 @@
 
         // Plateau buster decrement: last session was plateau buster and they got < minReps →
         // drop weight by the exercise's increment amount
-        function getPlateauBusterDecrement(exerciseId, workoutHistory) {
+        function getPlateauBusterDecrement(exerciseConfig, workoutHistory) {
+            const exerciseId = exerciseConfig.id;
             if (!workoutHistory || workoutHistory.length === 0) return null;
             const today = new Date(); today.setHours(0, 0, 0, 0);
             const previousWorkout = workoutHistory
@@ -469,7 +474,7 @@
             // Only drop weight if they truly failed (< minReps); stagnation keeps same weight
             if (previousReps >= (previousEx?.minReps || ADV_MIN_REPS)) return null;
             if (previousEx && previousEx.weight) {
-                const increment = getPRWeightIncrement(previousEx.name);
+                const increment = getWeightIncrement(exerciseConfig);
                 return {
                     weight: (parseFloat(previousEx.weight) - increment).toString(),
                     lastWeight: previousEx.weight,

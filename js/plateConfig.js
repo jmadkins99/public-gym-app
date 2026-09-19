@@ -114,6 +114,32 @@
             return 'pin';
         }
 
+        // The PR step: how much the card adds after a session at the top of the
+        // rep range. A USER setting, like loadType — saved as `increment` on the
+        // exercise from the dropdown in Settings > Manage Day N Exercises > ✏️.
+        // Only an explicit choice is stored; absent means "use the name map",
+        // which is empty, so the 2.5 default applies. A saved value outside
+        // the four real plate steps is ignored, so a hand-edited backup cannot
+        // smuggle in a 3 no gym can load. Mirrors the personal app's
+        // resolveIncrement, with the name map standing in for its id seeds.
+        const PR_INCREMENT_OPTIONS = [1.25, 2.5, 5, 10];
+
+        function resolveIncrement(exercise) {
+            const saved = exercise && exercise.increment;
+            if (PR_INCREMENT_OPTIONS.includes(saved)) return saved;
+            return getPRWeightIncrement(exercise && exercise.name);
+        }
+
+        // The step the card actually suggests. A two-sided machine is loaded in
+        // pairs, so a step that does not halve onto a real plate (1.25 -> 0.625
+        // a side) is doubled. The dropdown shows the raw step and says under it
+        // when this kicks in.
+        function getWeightIncrement(exercise) {
+            const base = resolveIncrement(exercise);
+            if (resolveLoadType(exercise) === 'plate-two-sided' && (base / 2) % 1.25 !== 0) return base * 2;
+            return base;
+        }
+
         // Build the config the breakdown calculators expect from the resolved
         // load type.
         //
