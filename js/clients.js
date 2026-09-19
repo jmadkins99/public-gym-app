@@ -324,14 +324,6 @@
             return templates[identifier] || null;
         }
 
-        // Weekday map, mirroring the personal app: Posterior on Mon/Wed/Fri,
-        // Anterior on Tue/Thu/Sat and Sunday. Day 1 is Anterior, matching the
-        // Anterior-first ordering the personal app uses.
-        //
-        // Unchanged by the Aug 2026 Anterior/Posterior switch: day 2 was Lower
-        // on Mon/Wed/Fri and is Posterior on Mon/Wed/Fri, so only the names
-        // moved. Leaving the numbers alone is what keeps a client who has since
-        // shifted a day for themselves from having it stomped.
         // Ian's weekday map. The numeric mirror of Jessi's below: day 1 is Anterior
         // on Mon/Wed/Fri, day 2 is Posterior on Tue/Thu/Sat and Sunday. All seven
         // days are listed deliberately — an omitted weekday is a rest day, and
@@ -350,12 +342,18 @@
             { dayOfWeek: 'Sunday',    workoutDayNumber: 2 },
         ];
 
+        // Jessi's weekday map, the same as the personal app's since 18 Sep
+        // 2026 — the two train together. Day 1 is Anterior on Mon/Wed/Sat,
+        // day 2 Posterior on Tue/Thu/Sun, and Friday is the rest day, listed as
+        // Posterior so it falls through the way the personal app's does. Fresh
+        // installs get it from the preset; existing devices from revision 14
+        // (see migrateJessiSplit), once.
         const JESSI_SPLIT_SCHEDULE = [
-            { dayOfWeek: 'Monday',    workoutDayNumber: 2 },
-            { dayOfWeek: 'Tuesday',   workoutDayNumber: 1 },
-            { dayOfWeek: 'Wednesday', workoutDayNumber: 2 },
-            { dayOfWeek: 'Thursday',  workoutDayNumber: 1 },
+            { dayOfWeek: 'Monday',    workoutDayNumber: 1 },
+            { dayOfWeek: 'Tuesday',   workoutDayNumber: 2 },
+            { dayOfWeek: 'Wednesday', workoutDayNumber: 1 },
+            { dayOfWeek: 'Thursday',  workoutDayNumber: 2 },
             { dayOfWeek: 'Friday',    workoutDayNumber: 2 },
             { dayOfWeek: 'Saturday',  workoutDayNumber: 1 },
-            { dayOfWeek: 'Sunday',    workoutDayNumber: 1 },
+            { dayOfWeek: 'Sunday',    workoutDayNumber: 2 },
         ];

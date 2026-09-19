@@ -259,7 +259,14 @@
         // loaded and the PR step on two of them. Those last three are one-time
         // edits made on the way past 13, not rules re-applied on every load —
         // see JESSI_REV13_* below.
-        const JESSI_SPLIT_REVISION = 13;
+        //
+        // 14 moves the weekday map to the personal app's from 18 Sep 2026
+        // (JESSI_SPLIT_SCHEDULE). It is the first bump to touch the schedule:
+        // until now only the first split wrote one, so that a day the client
+        // had moved for themselves was never stomped. This writes it once, on
+        // the way past 14, and a later bump leaves whatever she does with it
+        // afterwards alone. The program itself does not change.
+        const JESSI_SPLIT_REVISION = 14;
 
         // Applied once, to a config crossing from below revision 13. Anything
         // the client changes afterwards, in Settings or by adding a movement
@@ -433,11 +440,12 @@
                     categories: ['Anterior', 'Posterior'],
                     splitRevision: JESSI_SPLIT_REVISION,
                 },
-                // Only rewrite the schedule when the split is first applied.
-                // A later revision bump is a program edit, not a calendar
-                // change, and stomping the schedule every time would undo any
-                // day the client had since moved for themselves.
-                schedule: alreadySplit ? null : {
+                // Written when the split is first applied, and once more on
+                // the way past revision 14, which moved the weekday map. Any
+                // other bump is a program edit, not a calendar change, and
+                // stomping the schedule every time would undo any day the
+                // client had since moved for themselves.
+                schedule: (alreadySplit && config.splitRevision >= 14) ? null : {
                     ...(schedule || {}),
                     workoutDays: JESSI_SPLIT_SCHEDULE.map(d => ({ ...d })),
                     totalWorkoutDays: 2,
