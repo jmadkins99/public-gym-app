@@ -11,7 +11,11 @@
         };
 
         function WeeklyView({ workoutHistory, viewingWeek, setViewingWeek, currentWeek, exercisesByDay, onEditWorkout, onViewTiming, foregroundAt }) {
-            const weekWorkouts = workoutHistory.filter(w => w.week === viewingWeek);
+            // Newest first whatever order storage holds them in: an import, a
+            // cloud load or an edit can all leave it otherwise.
+            const weekWorkouts = workoutHistory
+                .filter(w => w.week === viewingWeek)
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
 
             return (
                 <>
@@ -63,9 +67,9 @@
                                     ? exercisesByDay[workout.day]
                                     : (workout.exercises || []);
 
-                                // Calculate sequential day number (total workouts completed)
-                                const workoutIndex = workoutHistory.indexOf(workout);
-                                const dayNumber = workoutHistory.length - workoutIndex;
+                                // Numbered within the week, counting down from the
+                                // newest. Mirrors the personal app.
+                                const dayNumber = weekWorkouts.length - idx;
 
                                 // Null for anything carrying no per-exercise
                                 // timestamps, which is every session logged

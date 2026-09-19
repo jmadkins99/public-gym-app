@@ -36,14 +36,20 @@
             });
 
             // Count completed exercises (only for current day)
+            // The first log of a day writes a row for every exercise on it, and
+            // some of those placeholders are not empty: a bodyweight row carries
+            // weight 'Body Weight'. So each type is judged on the field its LOG
+            // actually fills, and NA is not an answer. Mirrors the personal app.
+            const filled = (v) => !!v && String(v).trim() !== '' && v !== 'NA';
             const completedCount = currentDayWorkoutExercises.filter(e => {
-                // For cardio, check that time is actually > 0 (not just "0:00")
                 if (e.isCardio || e.type === 'cardio') {
                     const totalSeconds = ((e.minutes || 0) * 60) + (e.seconds || 0);
                     return totalSeconds > 0;
                 }
-                // For other exercise types, check if any data exists
-                return e.weight || e.reps || e.rounds || e.time || e.intensity;
+                if (e.type === 'assault-bike') return filled(e.rounds);
+                if (e.type === 'stairmaster') return filled(e.time);
+                if (e.type === 'bodyweight') return filled(e.reps);
+                return filled(e.weight) || filled(e.reps);
             }).length;
             const totalCount = getCurrentExercises().length;
 

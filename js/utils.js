@@ -103,10 +103,13 @@
             return getConsecutiveWeek(date, workoutHistory);
         }
 
-        // Parse MM:SS to total seconds
+        // Parse MM:SS to total seconds. Anything not in that shape reads as 0,
+        // a number included — a hand-edited backup can hold one, and it must
+        // not throw on the way to a PR check. The strict shape is deliberate:
+        // every time the app writes comes from a M:SS dropdown.
         function parseTimeToSeconds(timeStr) {
             if (!timeStr) return 0;
-            const parts = timeStr.split(':');
+            const parts = String(timeStr).split(':');
             if (parts.length !== 2) return 0;
             const minutes = parseInt(parts[0]) || 0;
             const seconds = parseInt(parts[1]) || 0;

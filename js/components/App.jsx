@@ -163,7 +163,6 @@
                 }
             };
 
-            const [selectedExercise, setSelectedExercise] = useState('');
             const [celebration, setCelebration] = useState(null);
             const [showSettings, setShowSettings] = useState(false);
             const [showBackupReminder, setShowBackupReminder] = useState(false);
@@ -363,12 +362,6 @@
                         });
                         setExercisesByDay(sortedDays);
 
-                        // Set first exercise as selected for progress view
-                        const allExercises = Object.values(sortedDays).flat();
-                        if (allExercises.length > 0 && !selectedExercise) {
-                            setSelectedExercise(allExercises[0].id);
-                        }
-
                         if (config.categories) {
                             setExerciseCategories(config.categories);
                         }
@@ -397,12 +390,6 @@
                             days[2] = config.day2.sort((a, b) => a.order - b.order);
                         }
                         setExercisesByDay(days);
-
-                        // Set first exercise as selected for progress view
-                        const allExercises = Object.values(days).flat();
-                        if (allExercises.length > 0 && !selectedExercise) {
-                            setSelectedExercise(allExercises[0].id);
-                        }
                     }
                 }
 
@@ -646,9 +633,24 @@
             const getPreviousWorkout = (exerciseId) => {
                 if (workoutHistory.length === 0) return null;
 
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
                 // Collect all sessions that included this exercise (regardless of NA status)
+                // Newest first by date rather than by storage order, which an
+                // import or a cloud load can leave otherwise.
                 const lastThreeSessions = [];
-                for (let workout of workoutHistory) {
+                const newestFirst = [...workoutHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+                for (let workout of newestFirst) {
+                    // Skip today's record while it is still open: it holds the
+                    // set just logged, and "Last:" on a logged card should name
+                    // the session before it, not repeat it back. A submitted
+                    // day is a finished session and counts. Mirrors the
+                    // personal app's getPreviousWorkout.
+                    const workoutDate = new Date(workout.date);
+                    workoutDate.setHours(0, 0, 0, 0);
+                    if (workoutDate.getTime() === today.getTime() && !workout.submitted) continue;
+
                     const exercise = workout.exercises.find(e => e.id === exerciseId);
                     if (exercise) {
                         lastThreeSessions.push(exercise);
@@ -1273,11 +1275,6 @@
                                         });
                                         setExercisesByDay(sortedDays);
 
-                                        const allExercises = Object.values(sortedDays).flat();
-                                        if (allExercises.length > 0 && !selectedExercise) {
-                                            setSelectedExercise(allExercises[0].id);
-                                        }
-
                                         if (config.categories) {
                                             setExerciseCategories(config.categories);
                                         }
@@ -1395,10 +1392,12 @@
                     {!showWizard && (<>
                     <div className="header">
                         <div className="header-top">
-                            <h1>Gym Tracker</h1>
+                            <div className="wordmark">
+                                <h1>Gym Tracker</h1>
+                                <div className="week-indicator">Week {currentWeek}</div>
+                            </div>
                             <button className="settings-btn" onClick={() => setShowSettings(true)}>⚙️</button>
                         </div>
-                        <div className="week-indicator">Week {currentWeek}</div>
                     </div>
 
                     <div className="content">
@@ -1439,12 +1438,6 @@
                             }}
                             onViewTiming={setTimingWorkout}
                             foregroundAt={lastForegroundAt}
-                        />}
-                        {currentView === 'progress' && <ProgressView
-                            workoutHistory={workoutHistory}
-                            selectedExercise={selectedExercise}
-                            setSelectedExercise={setSelectedExercise}
-                            exercisesByDay={exercisesByDay}
                         />}
                     </div>
 

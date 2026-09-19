@@ -18,6 +18,23 @@
                             ...updated[exerciseIndex],
                             [field]: value
                         };
+                    } else {
+                        // Not in that day's record (added to the program since,
+                        // or never logged): add a row rather than silently
+                        // dropping the edit. Mirrors the personal app.
+                        const def = allExercises.find(e => e.id === exerciseId);
+                        if (def) {
+                            updated.push({
+                                id: def.id,
+                                name: def.name,
+                                category: def.category,
+                                type: def.type || (def.typeId === 'cardio' ? 'cardio' : 'standard'),
+                                ...(def.isCardio ? { isCardio: true } : {}),
+                                ...(def.minReps !== undefined ? { minReps: def.minReps } : {}),
+                                ...(def.maxReps !== undefined ? { maxReps: def.maxReps } : {}),
+                                [field]: value
+                            });
+                        }
                     }
                     return updated;
                 });

@@ -67,10 +67,9 @@
         }
 
         .header {
+            flex: none;
             background: #0d0d1a;
-            padding: 20px;
-            position: sticky;
-            top: 0;
+            padding: 14px 20px;
             z-index: 100;
             border-bottom: 1px solid var(--accent);
             box-shadow: 0 4px 20px rgba(var(--accent-rgb), 0.2);
@@ -142,37 +141,6 @@
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             padding: 16px;
-        }
-
-        .day-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .day-btn {
-            flex: 1;
-            padding: 12px;
-            background: #1a1a2a;
-            border: 1px solid #2a2a3a;
-            color: #8a8aa0;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .day-btn.active {
-            background: var(--accent);
-            border-color: var(--accent-hi);
-            color: #b8b8d0;
-        }
-
-        .day-btn:only-child {
-            flex: 1 1 100%;
-            min-width: 100%;
         }
 
         .section-title {
@@ -407,20 +375,6 @@
         .history-exercise-data {
             font-weight: 600;
             flex: none;
-        }
-
-        .chart-container {
-            background: #0d0d1a;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
-            border: 1px solid #1a1a2a;
-        }
-
-        .chart-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 12px;
         }
 
         .empty-state {
@@ -800,16 +754,6 @@
             .wizard-exercise-row > div:first-child {
                 margin-bottom: 8px;
             }
-
-            /* Workout page day selector - wrap to 2 rows on mobile */
-            .day-btn {
-                flex: 1;
-                min-width: calc(25% - 8px);
-                height: 48px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
         }
 
         .wizard-buttons {
@@ -1076,6 +1020,14 @@
            Ported from the personal app. The card classes sit alongside the
            existing .exercise-card rule rather than replacing it, and win on
            source order. */
+
+        /* The title and the week share one line, so the card below gets the
+           height a second line cost. Mirrors the personal app. */
+        .wordmark {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
 
         .deck {
             --deck-gap: 14px;
