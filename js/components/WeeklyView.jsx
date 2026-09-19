@@ -105,13 +105,18 @@
                                             // last session older than this one, submitted or not.
                                             const isPR = completedExercise &&
                                                 isExercisePRInWorkout(completedExercise, workout, workoutHistory);
+                                            // Counted as of this entry, not today, so an older
+                                            // row in a run keeps the number it earned.
+                                            const prStreak = isPR
+                                                ? getPRStreakInWorkout(completedExercise, workout, workoutHistory) : 0;
                                             return (
                                                 <div key={expectedExercise.id} className="history-exercise">
                                                     <div className="history-exercise-title">
                                                         <div className="history-exercise-name">{expectedExercise.name}</div>
                                                         {isPR ? (
-                                                            <div className="streak-badge history-pr-badge" data-pr-badge>
-                                                                🔥 PR
+                                                            <div className="streak-badge history-pr-badge" data-pr-badge
+                                                                 data-streak={prStreak > 1 ? prStreak : undefined}>
+                                                                {prBadgeText(prStreak)}
                                                             </div>
                                                         ) : null}
                                                     </div>

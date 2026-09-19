@@ -24,10 +24,14 @@
             // and logged-card badges all use this helper so they cannot drift.
             let prCount = 0;
             const prExerciseIds = [];
+            // How long each run is, by id, for the badge on the timing row —
+            // counted as of this session, exactly as History counts it.
+            const prStreaksById = {};
             currentDayWorkoutExercises.forEach(exercise => {
                 if (isExercisePRInWorkout(exercise, todayWorkout, workoutHistory)) {
                     prCount++;
                     prExerciseIds.push(exercise.id);
+                    prStreaksById[exercise.id] = getPRStreakInWorkout(exercise, todayWorkout, workoutHistory);
                 }
             });
 
@@ -95,7 +99,8 @@
                             </div>
                         )}
 
-                        {timing && <TimingDetails timing={timing} prExerciseIds={prExerciseIds} />}
+                        {timing && <TimingDetails timing={timing} prExerciseIds={prExerciseIds}
+                                                  prStreaksById={prStreaksById} />}
 
                         <button className="modal-btn primary" onClick={onClose}>
                             Close

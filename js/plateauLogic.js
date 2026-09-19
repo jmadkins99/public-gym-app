@@ -71,7 +71,8 @@
 
         // ── Minimalist PR tracking helpers ────────────────────────────────────────
         // Mirrors the personal-app's simple mode: auto-increment when the last
-        // session hit maxReps, plus a 3-session stagnation gold flag. No downweight.
+        // session hit maxReps, plus a "Plateau detected" flag after six
+        // identical sessions. No downweight.
 
         // Takes the exercise rather than its id so the step can read the
         // client's saved `increment` (see resolveIncrement in plateConfig.js).
@@ -115,8 +116,13 @@
             };
         }
 
+        // Six, as in the personal app (b5bda0c). Three flagged too eagerly: a
+        // lift can sit at one weight for three sessions on the way to the top
+        // of its range, and that is progress rather than a plateau.
+        const STAGNATION_SESSIONS = 6;
+
         function getMinimalistStagnation(exerciseId, workoutHistory) {
-            if (!workoutHistory || workoutHistory.length < 3) return null;
+            if (!workoutHistory || workoutHistory.length < STAGNATION_SESSIONS) return null;
 
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -134,9 +140,9 @@
                     return true;
                 })
                 .sort((a, b) => new Date(b.date) - new Date(a.date))
-                .slice(0, 3);
+                .slice(0, STAGNATION_SESSIONS);
 
-            if (recent.length < 3) return null;
+            if (recent.length < STAGNATION_SESSIONS) return null;
 
             const exercises = recent.map(w => w.exercises.find(e => e.id === exerciseId));
             const first = exercises[0];
@@ -273,6 +279,49 @@
 
             const previous = getPreviousExerciseForPR(exercise.id, workoutHistory, workout.date, kind);
             return !!previous && isImprovement(exercise, previous, kind);
+        }
+
+        // The same run getPRStreak counts, but as it stood at the end of
+        // `workout` rather than as it stands today. getPRStreak walks back from
+        // the present, which is what the card's pill wants — it is about the
+        // set you are walking up to. History is a ledger: each row is read on
+        // its own day, or every entry in a run would carry the run's final
+        // number.
+        //
+        // Same arbiter (isImprovement), same skip rule (hasComparablePRData),
+        // same "strictly older than this entry" baseline as
+        // getPreviousExerciseForPR, and Submit Day is no more a condition here
+        // than it is there. Returns the consecutive improvements ending at this
+        // session: 1 is a lone PR, 2+ a run. isExercisePRInWorkout still
+        // decides whether a badge appears; this only decides what it says.
+        // Mirrors the personal app's getPRStreakInWorkout.
+        function getPRStreakInWorkout(exercise, workout, workoutHistory) {
+            if (!exercise || !workout || !workoutHistory) return 0;
+            const kind = getPRKind(exercise);
+            if (!hasComparablePRData(exercise, kind)) return 0;
+
+            const cutoff = new Date(workout.date);
+            const older = workoutHistory
+                .filter(w => new Date(w.date) < cutoff)
+                .map(w => ({ w, e: w.exercises && w.exercises.find(x => x.id === exercise.id) }))
+                .filter(({ e }) => hasComparablePRData(e, kind))
+                .sort((a, b) => new Date(b.w.date) - new Date(a.w.date))
+                .map(({ e }) => e);
+
+            const entries = [exercise, ...older];
+            let streak = 0;
+            for (let i = 0; i + 1 < entries.length; i++) {
+                if (!isImprovement(entries[i], entries[i + 1], kind)) break;
+                streak++;
+            }
+            return streak;
+        }
+
+        // What a PR badge says: "🔥 PR" for a lone improvement, "🔥 N" once the
+        // run is two or more. One helper so History, the logged card and Submit
+        // Day cannot describe the same streak two ways.
+        function prBadgeText(streak) {
+            return streak > 1 ? '🔥 ' + streak : '🔥 PR';
         }
 
         // The mirror image of getMinimalistStagnation: how many consecutive

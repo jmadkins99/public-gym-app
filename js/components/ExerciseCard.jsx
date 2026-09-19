@@ -104,12 +104,19 @@
             }) : null;
             const loggedExercise = loggedWorkout?.exercises.find(e => e.id === exercise.id);
             const loggedPR = isLogged && isExercisePRInWorkout(loggedExercise, loggedWorkout, workoutHistory);
+            // How long the run is INCLUDING the set just logged, read the way
+            // History will read this row. The pre-log pill (getPRStreak) holds
+            // today back on purpose; once the set is logged you want the number
+            // you just reached.
+            const loggedPRStreak = loggedPR
+                ? getPRStreakInWorkout(loggedExercise, loggedWorkout, workoutHistory) : 0;
             const cardClass = 'card card-open exercise-card' +
                 (isLogged ? ' logged' : '') +
                 (isCelebrating ? ' pr-celebrating' : '');
             const loggedPRBadge = () => loggedPR ? (
-                <div className="streak-badge logged-pr-badge" data-logged-pr-badge>
-                    🔥 PR
+                <div className="streak-badge logged-pr-badge" data-logged-pr-badge
+                     data-streak={loggedPRStreak > 1 ? loggedPRStreak : undefined}>
+                    {prBadgeText(loggedPRStreak)}
                 </div>
             ) : null;
             const exerciseNameWithLoggedPR = (className = 'exercise-name card-open-name') => (
@@ -633,7 +640,7 @@
                     : null)
                 : minimalistPrTracking
                 ? (minimalistPR ? { cls: 'up', text: '+' + minimalistPR.increment + ' lbs' }
-                    : minimalistStagnation ? { cls: 'flat', text: '2 sets recommended' }
+                    : minimalistStagnation ? { cls: 'flat', text: 'Plateau detected' }
                     : null)
                 : prRecommendation
                 ? { cls: prRecommendation.type === 'strength' ? 'up' : 'flat',

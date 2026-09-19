@@ -8,7 +8,7 @@
         // callers guard on it, because a workout with no timestamps at all
         // (every session logged before this shipped) should render nothing
         // rather than an empty list.
-        function TimingDetails({ timing, prExerciseIds = [] }) {
+        function TimingDetails({ timing, prExerciseIds = [], prStreaksById = {} }) {
             const hasEstimatedRow = timing.rows.some(r => r.estimated);
             const prSet = new Set(prExerciseIds);
 
@@ -16,6 +16,7 @@
                 <div data-timing-details style={{ marginBottom: '20px', fontSize: '14px' }}>
                     {timing.rows.map(row => {
                         const isPR = prSet.has(row.id);
+                        const prStreak = prStreaksById[row.id] || 0;
                         return (
                             <div
                                 key={row.id}
@@ -32,8 +33,9 @@
                                 <span style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                                     <span>{row.name}</span>
                                     {isPR ? (
-                                        <span className="streak-badge day-breakdown-pr-badge" data-day-breakdown-pr-badge>
-                                            🔥 PR
+                                        <span className="streak-badge day-breakdown-pr-badge" data-day-breakdown-pr-badge
+                                              data-streak={prStreak > 1 ? prStreak : undefined}>
+                                            {prBadgeText(prStreak)}
                                         </span>
                                     ) : null}
                                 </span>
