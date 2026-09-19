@@ -204,6 +204,35 @@
                 parsePositiveInt(exercise.reps) !== null;
         }
 
+        // The bottom of the client's reps dropdown, or null for a client who
+        // types reps freely. Set by App on every render from its repsDropdown
+        // state, because isImprovement is called from far too many places to
+        // thread the client's settings through each of them.
+        let prRepFloor = null;
+        function setPRRepFloor(repsDropdown) {
+            const min = repsDropdown && Number(repsDropdown.min);
+            prRepFloor = Number.isFinite(min) ? min : null;
+        }
+
+        // A weighted set that bottomed out the reps dropdown. The bottom value
+        // is not a target anyone trains for — it is the number you log when
+        // the set died — so loading more weight and failing on it is a failed
+        // attempt at a PR, not a PR. isImprovement refuses it, the one place
+        // that decision can live, or the pill, the badges and Submit Day's
+        // count would disagree about the same set. Mirrors the personal app's
+        // b972f85, with the client's own dropdown standing in for the fixed
+        // 3-6 range.
+        //
+        // Only the NEW session is judged. A failed set still stands as the
+        // baseline for the next one, so coming back and getting one more rep at
+        // that weight is a real improvement. A client with no dropdown has no
+        // floor, and cardio and bodyweight rows never reach this check.
+        function isFailedSet(entry) {
+            if (prRepFloor === null || !entry) return false;
+            const reps = parsePositiveInt(entry.reps);
+            return reps !== null && reps <= prRepFloor;
+        }
+
         function isImprovement(newer, older, kind = getPRKind(newer)) {
             if (!hasComparablePRData(newer, kind) || !hasComparablePRData(older, kind)) return false;
 
@@ -222,6 +251,9 @@
             if (kind === 'bodyweight') {
                 return parsePositiveInt(newer.reps) > parsePositiveInt(older.reps);
             }
+
+            // Refused before the weight comparison it would otherwise win on.
+            if (isFailedSet(newer)) return false;
 
             const newWeight = parsePositiveFloat(newer.weight);
             const oldWeight = parsePositiveFloat(older.weight);

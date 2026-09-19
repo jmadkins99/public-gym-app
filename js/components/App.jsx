@@ -46,6 +46,10 @@
             // standing at is still open in front of you, its clock still
             // running.
             const [deckIndex, setDeckIndex] = useState(0);
+            // The day restoreOpenCard put back, for the schedule effect below,
+            // which picks today's day after hydration and would otherwise
+            // overwrite it a moment later.
+            const restoredDay = useRef(null);
 
             // When each exercise's Weight Breakdown panel was opened today,
             // keyed by id — the start half of every movement's clock.
@@ -106,6 +110,59 @@
                     [exerciseId]: new Date().toISOString()
                 }));
             };
+            // Closing a panel drops its anchor too. The anchor is the claim that
+            // a set is under way at that machine, and a shut card makes no such
+            // claim: LOG only exists on the open face, and reopening stamps a
+            // fresh one anyway. What this buys is that storage only ever names
+            // a card that is actually open, which is what lets restoreOpenCard
+            // trust it. No id closes whatever is open (a day switch).
+            const closeWeightBreakdown = (exerciseId) => {
+                setExpandedWeightBreakdown(cur =>
+                    (exerciseId === undefined || cur === exerciseId ? null : cur));
+                setExerciseStartTimes(prev => {
+                    if (exerciseId === undefined) {
+                        return Object.keys(prev).length ? saveStartTimes({}) : prev;
+                    }
+                    if (!prev[exerciseId]) return prev;
+                    const updated = { ...prev };
+                    delete updated[exerciseId];
+                    return saveStartTimes(updated);
+                });
+            };
+
+            // Reopen the card that was open when the page went away. Phones
+            // reload a backgrounded tab on their own between sets, and the open
+            // panel, deck position and day are plain state, so a reload used to
+            // land on card one of the default day, shut — and the swipe up
+            // needed to reach LOG re-stamped the anchor, so a two-minute set
+            // logged as a few seconds. Mirrors the personal app's 9f7b02a and
+            // 24f0305.
+            //
+            // The surviving anchor is enough to put it all back: at most one
+            // exists, only while its card is open (closeWeightBreakdown and
+            // logExercise both drop it), and it is date-stamped. Because the
+            // panel comes back already open, openWeightBreakdown's no-op on an
+            // open card keeps the original stamp. Skipped for an anchor whose
+            // movement is gone from the program or already logged today.
+            const restoreOpenCard = (days, history) => {
+                const today = new Date().toDateString();
+                for (const id of Object.keys(exerciseStartTimes)) {
+                    const dayNum = Object.keys(days).find(d => (days[d] || []).some(ex => ex.id === id));
+                    if (dayNum === undefined) continue;
+                    const record = history.find(w => new Date(w.date).toDateString() === today
+                        && String(w.day) === String(dayNum) && !w.submitted);
+                    const row = record && record.exercises.find(e => e.id === id);
+                    if (row && hasLoggedData(row)) continue;
+
+                    const roster = [...days[dayNum]].sort((a, b) => a.order - b.order);
+                    restoredDay.current = Number(dayNum);
+                    setCurrentDay(Number(dayNum));
+                    setDeckIndex(roster.findIndex(ex => ex.id === id));
+                    setExpandedWeightBreakdown(id);
+                    return;
+                }
+            };
+
             const [selectedExercise, setSelectedExercise] = useState('');
             const [celebration, setCelebration] = useState(null);
             const [showSettings, setShowSettings] = useState(false);
@@ -367,6 +424,10 @@
                     setShowSyncPrompt(true);
                 }
 
+                if (savedConfig && savedConfig.version === 2 && savedConfig.days) {
+                    restoreOpenCard(savedConfig.days, savedHistory || []);
+                }
+
                 setHydrated(true);
                 });
                 });
@@ -420,11 +481,34 @@
                     const todayEntry = schedule.scheduleIsExplicit
                         ? schedule.workoutDays.find(wd => wd.dayOfWeek === todayName)
                         : null;
+                    if (restoredDay.current !== null) {
+                        setCurrentDay(restoredDay.current);
+                        restoredDay.current = null;
+                        return;
+                    }
                     setCurrentDay(todayEntry
                         ? todayEntry.workoutDayNumber
                         : schedule.workoutDays[0].workoutDayNumber);
                 }
             }, [schedule]);
+
+            // Whether a row in today's workout was actually logged. A day's
+            // record can hold rows with nothing in them, so presence in the
+            // record means nothing on its own — only data does. Shared by the
+            // loggedExercises derivation below and restoreOpenCard, so the two
+            // cannot disagree about which cards are done.
+            const hasLoggedData = (exercise) => {
+                if (exercise.type === 'assault-bike') return !!(exercise.rounds && exercise.rounds.trim() !== '');
+                if (exercise.type === 'stairmaster') return !!(exercise.time && exercise.time.trim() !== '');
+                if (exercise.isCardio || exercise.type === 'cardio') {
+                    return !!((exercise.intensity && exercise.intensity.trim() !== '') ||
+                              (exercise.minutes && exercise.minutes > 0) ||
+                              (exercise.seconds && exercise.seconds > 0));
+                }
+                if (exercise.type === 'bodyweight') return !!(exercise.reps && exercise.reps.toString().trim() !== '');
+                return !!((exercise.weight && exercise.weight.toString().trim() !== '') ||
+                          (exercise.reps && exercise.reps.toString().trim() !== ''));
+            };
 
             // Restore logged state and workout data from today's workout
             useEffect(() => {
@@ -445,22 +529,7 @@
                     const newWorkoutData = {};
 
                     todayWorkout.exercises.forEach(exercise => {
-                        let hasData = false;
-
-                        if (exercise.type === 'assault-bike') {
-                            hasData = exercise.rounds && exercise.rounds.trim() !== '';
-                        } else if (exercise.type === 'stairmaster') {
-                            hasData = exercise.time && exercise.time.trim() !== '';
-                        } else if (exercise.isCardio || exercise.type === 'cardio') {
-                            hasData = (exercise.intensity && exercise.intensity.trim() !== '') ||
-                                      (exercise.minutes && exercise.minutes > 0) ||
-                                      (exercise.seconds && exercise.seconds > 0);
-                        } else if (exercise.type === 'bodyweight') {
-                            hasData = exercise.reps && exercise.reps.toString().trim() !== '';
-                        } else {
-                            hasData = (exercise.weight && exercise.weight.toString().trim() !== '') ||
-                                      (exercise.reps && exercise.reps.toString().trim() !== '');
-                        }
+                        const hasData = hasLoggedData(exercise);
 
                         if (hasData) {
                             newLoggedExercises[exercise.id] = true;
@@ -1173,6 +1242,10 @@
                 setShowBackupReminder(false);
             };
 
+            // Before any card, badge or count below asks isImprovement for a
+            // verdict: the bottom of this client's reps dropdown is a failed set.
+            setPRRepFloor(repsDropdown);
+
             // Storage not read yet: render nothing rather than a flash of
             // default state (avoids acting on data that is about to change).
             if (!hydrated) {
@@ -1348,8 +1421,7 @@
                             repsDropdown={repsDropdown}
                             expandedWeightBreakdown={expandedWeightBreakdown}
                             openWeightBreakdown={openWeightBreakdown}
-                            closeWeightBreakdown={(id) => setExpandedWeightBreakdown(
-                                (cur) => (id === undefined || cur === id ? null : cur))}
+                            closeWeightBreakdown={closeWeightBreakdown}
                             workoutHistory={workoutHistory}
                             deckIndex={deckIndex}
                             setDeckIndex={setDeckIndex}
