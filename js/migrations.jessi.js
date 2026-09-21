@@ -284,6 +284,37 @@
         // Press. Posterior swaps Kelso Shrugs and Transverse Plane Rows. Every
         // movement stays on the day it was already on, so unlike 12 nobody sees
         // a movement appear on a day it was not on.
+        //
+        // ----------------------------------------------------------------
+        // LANDING A REORDER
+        // ----------------------------------------------------------------
+        // The paragraphs above are the history. This is the procedure.
+        //
+        // A reorder lands in THREE places across TWO repos:
+        //   1. gym-tracker/js/config.js — DEFAULT_EXERCISES, plus a bump of
+        //      EXERCISE_CONFIG_VERSION. Josh's own program.
+        //   2. JESSI_ANTERIOR_ORDER / JESSI_POSTERIOR_ORDER below, plus a bump
+        //      of this constant. Reaches Jessi's EXISTING devices, and it is
+        //      the ONLY path that reaches a signed-in phone — the
+        //      jessiFullBodyMigrationApplied<N> one-shots all sit inside
+        //      `if (repo.mode === 'local')` and are inert on her actual device.
+        //   3. clients.js — the `jessi` coach preset, which seeds a FRESH
+        //      install while this file fixes up an existing one. THE ONE THAT
+        //      GETS MISSED. Nothing here points at it; case 33 is what catches
+        //      you. Its `splitRevision: JESSI_SPLIT_REVISION` reads this
+        //      constant live, so never hardcode a number there. Ian's and
+        //      graciepoo's presets share that file and are different programs —
+        //      Ian's roster overlaps on several names, so check before editing.
+        //
+        // Whether a change needs a one-time JESSI_REV<N>_* pass comes down to
+        // who owns the field. `category` and `order` are code-owned: the take()
+        // calls re-derive them from the order lists on every crossing, so a
+        // pure reorder needs no one-shot and overwrites nothing — ids, weights,
+        // rep ranges, load types and PR steps all ride through on the spread.
+        // `name`, `loadType` and `increment` are the CLIENT's. Re-pointing one
+        // of those overwrites an answer she may have chosen, so it is made once
+        // on the way past a revision and never re-applied; REV13's RENAMES,
+        // RETIRED and MACHINES lists are the worked example.
         const JESSI_SPLIT_REVISION = 15;
 
         // Applied once, to a config crossing from below revision 13. Anything
