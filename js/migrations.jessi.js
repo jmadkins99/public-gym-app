@@ -125,17 +125,21 @@
         // 12 Anterior, 9 Posterior — the push side carries more volume on
         // purpose.
 
-        // Revision 13 (Sep 2026) matches the personal app's config version 20
-        // name for name and in the same order.
+        // Revision 15 (Sep 2026) matches the personal app's config version 21
+        // name for name and in the same order. The two programs have been kept
+        // identical since the Aug 2026 split and this reorder holds that.
         const JESSI_ANTERIOR_ORDER = [
             'Tricep Extensions',
             'Chest Press',
             'Incline Chest Press',
             'Chest Flies',
-            'Shoulder Press',
-            'Lateral Raises',
+            // Up two places each in revision 15, ahead of the shoulder work.
             'Overhead Tricep Extensions',
             'Ab Crunches',
+            // The shoulder pair drops behind them and reverses as it goes:
+            // Lateral Raises used to follow Shoulder Press and now leads it.
+            'Lateral Raises',
+            'Shoulder Press',
             'Leg Press',
             'Leg Extensions',
         ];
@@ -146,8 +150,10 @@
             'Recline Curls',
             'Shoulder Flexion Curls',
             'Sagittal Plane Pullovers',
-            'Transverse Plane Rows',
+            // These two traded places in revision 15, and that is the whole of
+            // Posterior's reorder — every other position on the day holds.
             'Kelso Shrugs',
+            'Transverse Plane Rows',
             'Frontal Plane Pulldowns',
             'Back Extensions',
             // Adductor magnus is a hip extensor, hence the posterior chain.
@@ -266,7 +272,19 @@
         // had moved for themselves was never stomped. This writes it once, on
         // the way past 14, and a later bump leaves whatever she does with it
         // afterwards alone. The program itself does not change.
-        const JESSI_SPLIT_REVISION = 14;
+        //
+        // 15 catches up with the personal app's config version 21, and is a
+        // pure reorder of both days — no renames, no retirements, no machine or
+        // increment changes, nothing added. It therefore needs no REV15_* pass
+        // of its own: the take() calls below re-sort the client's existing
+        // exercises off JESSI_*_ORDER and everything the client owns rides
+        // through untouched, which is not true of 13. Anterior moves Overhead
+        // Tricep Extensions and Ab Crunches up two places each and puts the
+        // shoulder pair behind them, reversed, so Lateral Raises leads Shoulder
+        // Press. Posterior swaps Kelso Shrugs and Transverse Plane Rows. Every
+        // movement stays on the day it was already on, so unlike 12 nobody sees
+        // a movement appear on a day it was not on.
+        const JESSI_SPLIT_REVISION = 15;
 
         // Applied once, to a config crossing from below revision 13. Anything
         // the client changes afterwards, in Settings or by adding a movement

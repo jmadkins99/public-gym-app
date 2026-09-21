@@ -78,8 +78,8 @@
                     splitRevision: JESSI_SPLIT_REVISION,
                     workoutDays: {
 
-                        // Revision 13 (Sep 2026): the personal app's config
-                        // version 20, name for name and in the same order.
+                        // Revision 15 (Sep 2026): the personal app's config
+                        // version 21, name for name and in the same order.
                         // Every movement names its machine's loadType rather
                         // than leaving it to the name guesses, four of which
                         // are wrong for this gym (Shoulder Flexion Curls,
@@ -96,10 +96,13 @@
                                 { name: 'Chest Press', id: 'chest-press', startingWeight: '100', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
                                 { name: 'Incline Chest Press', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
                                 { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                { name: 'Lateral Raises', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                // Up two places each in revision 15, ahead of
+                                // the shoulder work; the shoulder pair goes
+                                // behind them and reverses as it goes.
                                 { name: 'Overhead Tricep Extensions', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
                                 { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Lateral Raises', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
+                                { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
                                 { name: 'Leg Press', sets: 1, minReps: 6, maxReps: 8, loadType: 'plate-two-sided', increment: 5 },
                                 { name: 'Leg Extensions', id: 'actual-leg-extensions', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
                             ]
@@ -113,8 +116,9 @@
                                 { name: 'Shoulder Flexion Curls', id: 'actual-preacher-curls', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
                                 // Was Sagittal Plane Pulldowns.
                                 { name: 'Sagittal Plane Pullovers', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                { name: 'Transverse Plane Rows', sets: 1, minReps: 6, maxReps: 8, loadType: 'plate-one-sided' },
+                                // Traded places in revision 15.
                                 { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8, loadType: 'plate-one-sided' },
+                                { name: 'Transverse Plane Rows', sets: 1, minReps: 6, maxReps: 8, loadType: 'plate-one-sided' },
                                 { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8, loadType: 'plate-one-sided' },
                                 { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin', increment: 5 },
                                 { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
