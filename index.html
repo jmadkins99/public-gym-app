@@ -2,7 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Laid out at 0.75 zoom rather than 1:1. Same value and same reasoning as
+         the personal app's index.html, which carries the long version: every
+         size in the stylesheet is a fixed px, so the layout viewport alone sets
+         how dense the page reads, and 0.75 opens it to ~524 px on a phone.
+         Keeping the two apps on one number is the point -- a difference here is
+         exactly what made the two look like different apps on two phones.
+
+         A page zoom saved in Safari multiplies with this rather than replacing
+         it, so a site still holding 75% has to be reset to 100%. -->
+    <meta name="viewport" content="width=device-width, initial-scale=0.75, maximum-scale=0.75, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
