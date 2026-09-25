@@ -274,14 +274,11 @@
                 // Migrate existing data to namespaced storage (one-time for existing users)
                 migrateToNamespacedStorage();
 
-                // One-shot Anterior/Posterior migration for Jessi's PPL data
-                migrateJessiToAnteriorPosterior();
-
-                // One-shot Torso/Limbs migration for Jessi's Anterior/Posterior data
-                migrateJessiToFullBody();
-
-                // One-shot auto-enable of the 5-8 reps dropdown for Jessi
-                enableRepsDropdownForJessi();
+                // Jessi's local one-shots used to run here. They identified his
+                // install by the shape of its config, which other clients'
+                // programs shared, and were retired in revision 16 (Sep 2026).
+                // His program is migrated by migrateJessiSplit below, which only
+                // ever touches a config carrying his splitRevision stamp.
 
                 // Check if setup is completed
                 const setupCompleted = storage.getItem('gymSetupCompleted');
@@ -334,12 +331,11 @@
 
                 // Load custom exercise configurations
                 if (savedConfig) {
-                    // Aug 2026: split Full Body into Upper/Lower, and apply any
-                    // later code-side reorder on top. Runs in BOTH modes: on a
-                    // signed-in device this is the only path that can change
-                    // the program, since the legacy sentinel migrations above
-                    // are gated on repo.mode === 'local'. Needs the loaded
-                    // history so returning movements reclaim their original ids.
+                    // Jessi's program (migrations.jessi.js): rebuilt from
+                    // JESSI_PROGRAM on each JESSI_SPLIT_REVISION bump, and a
+                    // no-op for every other client — it requires his
+                    // splitRevision stamp. Runs in BOTH modes, so it is the one
+                    // path that reaches his signed-in phone.
                     const split = migrateJessiSplit(savedConfig, savedHistory, savedSchedule);
                     if (split) {
                         savedConfig = split.config;
@@ -348,7 +344,7 @@
                             repo.saveScheduleConfig(split.schedule);
                             setSchedule(split.schedule);
                         }
-                        console.log('[Jessi Upper/Lower] applied; recovered ids:', split.recoveredIds);
+                        console.log('[Jessi program] revision', split.config.splitRevision, 'applied');
                     }
 
                     const config = savedConfig;
@@ -1212,17 +1208,6 @@
                     if (confirm('FINAL WARNING: All your progress and custom exercise names/order will be lost forever. Continue?')) {
                         window.repo.clearAll();
                         storage.removeItem('lastBackupReminder');
-                        // Every one-shot gate, not just the oldest one. These
-                        // self-gate on a flag, so leaving any of them set means
-                        // a post-reset install (e.g. re-entering a coach code)
-                        // silently never gets that feature back.
-                        storage.removeItem('jessiAPMigrationApplied');
-                        storage.removeItem('jessiFullBodyMigrationApplied5');
-                        storage.removeItem('jessiFullBodyMigrationApplied4');
-                        storage.removeItem('jessiFullBodyMigrationApplied3');
-                        storage.removeItem('jessiFullBodyMigrationApplied2');
-                        storage.removeItem('jessiFullBodyMigrationApplied1');
-                        storage.removeItem('jessiRepsDropdownEnabled');
                         setWorkoutHistory([]);
                         setWorkoutData({});
                         setLoggedExercises({});

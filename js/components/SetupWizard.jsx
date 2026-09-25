@@ -185,19 +185,14 @@
                         prTracking: preset.prTracking || false,
                         advancedPrTracking: preset.advancedPrTracking || false,
                         minimalistPrTracking: preset.minimalistPrTracking || false,
-                        // Which preset built this config. Read by the Jessi
-                        // one-shots below, which otherwise identify her install
-                        // by the shape of its categories — a signal that also
-                        // matches any other client on an Anterior/Posterior
-                        // split, and would collapse their program into one day.
+                        // Which preset built this config. migrateJessiSplit
+                        // refuses any config stamped for someone other than
+                        // Jessi, a second guard behind its splitRevision check.
                         coachPreset: identifier,
-                        // Carried from the preset so a coach-code install gets
-                        // this immediately. The one-shot enabler below only runs
-                        // at mount, so without this a fresh install would need a
-                        // second load before the dropdown appeared.
+                        // Carried from the preset; nothing else turns it on.
                         repsDropdown: preset.repsDropdown || null,
-                        // Only present on presets that are a revision of a
-                        // migrated program; see the note on the jessi preset.
+                        // Only Jessi's preset has one; it is what lets
+                        // migrateJessiSplit reach his program on a later bump.
                         ...(preset.splitRevision !== undefined
                             ? { splitRevision: preset.splitRevision } : {})
                     });

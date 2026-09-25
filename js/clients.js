@@ -13,6 +13,12 @@
 
         // Get preset template by identifier
         function getPresetTemplate(identifier) {
+            // Jessi's program is built from JESSI_PROGRAM in migrations.jessi.js,
+            // the same table his existing devices are migrated from, so the two
+            // cannot drift. Returned before anyone else's template is built, so
+            // nothing in his builder can reach another client's install.
+            if (identifier === 'jessi') return buildJessiPreset();
+
             const templates = {
 
                 'lexi': {
@@ -47,86 +53,6 @@
                             ]
 
                         }
-                    }
-                },
-
-                // Must stay in lockstep with migrateJessiToFullBody's
-                // getDesiredOrder: the preset serves fresh installs, the
-                // migration serves devices that already exist, and both have to
-                // produce the same program. This preset sat frozen in the
-                // Torso/Limbs era from f4afffc through the Full Body switch in
-                // 2d88aba, so a coach-code install rendered the old two-day
-                // split until a refresh let the migration fix it. Test 33 pins
-                // the two together by asserting a refresh changes nothing.
-                // Kept in lockstep with JESSI_ANTERIOR_ORDER /
-                // JESSI_POSTERIOR_ORDER and migrateJessiSplit: this is the
-                // fresh-install path, those are the existing-device path, and
-                // they must produce the same program. Test 33 pins them to
-                // each other.
-                'jessi': {
-                    name: 'Anterior - Posterior',
-                    minimalistPrTracking: true,
-                    repsDropdown: { min: 5, max: 8 },
-                    bypassSchedule: true,
-                    scheduleDays: JESSI_SPLIT_SCHEDULE,
-                    // Stamps the config as an already-split program, which is
-                    // what migrateJessiSplit keys off. Without it a
-                    // fresh coach-code install has two days and no stamp, so
-                    // the migration reads it as "not Jessi's single Full Body
-                    // day", returns null, and every future reorder silently
-                    // skips exactly the installs that are already correct.
-                    splitRevision: JESSI_SPLIT_REVISION,
-                    workoutDays: {
-
-                        // Revision 15 (Sep 2026): the personal app's config
-                        // version 21, name for name and in the same order.
-                        // Every movement names its machine's loadType rather
-                        // than leaving it to the name guesses, four of which
-                        // are wrong for this gym (Shoulder Flexion Curls,
-                        // Sagittal Plane Pullovers, Back Extensions, Frontal
-                        // Plane Pulldowns). Keep in step with
-                        // JESSI_ANTERIOR_ORDER / JESSI_POSTERIOR_ORDER and
-                        // JESSI_REV13_MACHINES in migrations.jessi.js — this
-                        // preset builds a FRESH coach-code install while those
-                        // migrate an existing one. Test 33 pins them together.
-                        1: {
-                            name: 'Anterior',
-                            exercises: [
-                                { name: 'Tricep Extensions', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                { name: 'Chest Press', id: 'chest-press', startingWeight: '100', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                { name: 'Incline Chest Press', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                { name: 'Chest Flies', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                // Up two places each in revision 15, ahead of
-                                // the shoulder work; the shoulder pair goes
-                                // behind them and reverses as it goes.
-                                { name: 'Overhead Tricep Extensions', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                { name: 'Ab Crunches', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                { name: 'Lateral Raises', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                { name: 'Shoulder Press', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                { name: 'Leg Press', sets: 1, minReps: 6, maxReps: 8, loadType: 'plate-two-sided', increment: 5 },
-                                { name: 'Leg Extensions', id: 'actual-leg-extensions', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                            ]
-                        },
-
-                        2: {
-                            name: 'Posterior',
-                            exercises: [
-                                { name: 'Recline Curls', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                // Was Preacher Curls; the id is unchanged.
-                                { name: 'Shoulder Flexion Curls', id: 'actual-preacher-curls', startingWeight: '50', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                // Was Sagittal Plane Pulldowns.
-                                { name: 'Sagittal Plane Pullovers', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                // Traded places in revision 15.
-                                { name: 'Kelso Shrugs', sets: 1, minReps: 6, maxReps: 8, loadType: 'plate-one-sided' },
-                                { name: 'Transverse Plane Rows', sets: 1, minReps: 6, maxReps: 8, loadType: 'plate-one-sided' },
-                                { name: 'Frontal Plane Pulldowns', sets: 1, minReps: 6, maxReps: 8, loadType: 'plate-one-sided' },
-                                { name: 'Back Extensions', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin', increment: 5 },
-                                { name: 'Hip Adduction', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                                // 2.5 here, unlike the personal app's 5.
-                                { name: 'Calf Raises', sets: 1, minReps: 6, maxReps: 8, loadType: 'pin' },
-                            ]
-                        }
-
                     }
                 },
 
@@ -257,29 +183,30 @@
                     }
                 },
 
-                // Ian. Close to Jessi's split — same two days, same 6-8 goal
-                // range, same 5-8 reps dropdown — but his own roster, order and
-                // gym. Differences worth knowing:
+                // Ian. Modelled on Jessi's Aug 2026 Anterior/Posterior split —
+                // same two days, same 6-8 goal range, same 5-8 reps dropdown —
+                // but his own roster, order and gym, and unaffected by Jessi's
+                // Sep 2026 move to Full Body. Differences worth knowing:
                 //
-                //   - No Chest Press, so Anterior is 11 movements to her 12.
+                //   - No Chest Press, so Anterior is 11 movements.
                 //   - Shoulders and triceps lead the day; chest sits 7th-8th.
                 //   - "Wrist Curls" and "Incline Curls" are his names for what
-                //     she calls Cable Wrist Curls and Recline Curls.
+                //     Jessi's program called Cable Wrist Curls and Recline Curls.
                 //   - Every movement is seeded loadType 'pin'. He trains
                 //     somewhere else, so the name-based rules — which would make
-                //     six of these plate-loaded, on the assumption they are her
-                //     machines — are overridden outright. He can correct any of
+                //     six of these plate-loaded, on the assumption they are
+                //     Jessi's machines — are overridden outright. He can correct any of
                 //     them in Settings.
                 //   - No startingWeight anywhere. His first session is blank by
                 //     choice; note this means the Weight Breakdown opens empty
                 //     until he types a weight, since it bails at target === 0.
                 //
-                // Deliberately NO splitRevision. Stamping one would expose him
-                // to migrateJessiSplit rebuilding his program as hers on the
-                // next JESSI_SPLIT_REVISION bump; omitting it used to expose him
-                // to migrateJessiToFullBody collapsing his two days into one.
-                // The coachPreset stamp written by handleCoachIdVerified is what
-                // holds both off, and it does so for every future client too.
+                // Deliberately NO splitRevision: it is the one mark
+                // migrateJessiSplit requires, so stamping it would have that
+                // rebuild his program as Jessi's on the next revision bump. The
+                // coachPreset stamp written by handleCoachIdVerified is a second
+                // guard. (Before revision 16 a local one-shot could also collapse
+                // an unstamped copy of this program into one day; it is gone.)
                 'ian': {
                     name: 'Anterior - Posterior',
                     minimalistPrTracking: true,
@@ -328,14 +255,13 @@
             return templates[identifier] || null;
         }
 
-        // Ian's weekday map. The numeric mirror of Jessi's below: day 1 is Anterior
+        // Ian's weekday map: day 1 is Anterior
         // on Mon/Wed/Fri, day 2 is Posterior on Tue/Thu/Sat and Sunday. All seven
         // days are listed deliberately — an omitted weekday is a rest day, and
         // getTodayDay() would return null and highlight nothing on it.
         //
         // No revision constant accompanies this, and there is no Ian migration.
-        // His program is settled, so the preset is the only path that builds it;
-        // the coachPreset stamp is what keeps Jessi's one-shots off it.
+        // His program is settled, so the preset is the only path that builds it.
         const IAN_SPLIT_SCHEDULE = [
             { dayOfWeek: 'Monday',    workoutDayNumber: 1 },
             { dayOfWeek: 'Tuesday',   workoutDayNumber: 2 },
@@ -346,18 +272,19 @@
             { dayOfWeek: 'Sunday',    workoutDayNumber: 2 },
         ];
 
-        // Jessi's weekday map, the same as the personal app's since 18 Sep
-        // 2026 — the two train together. Day 1 is Anterior on Mon/Wed/Sat,
-        // day 2 Posterior on Tue/Thu/Sun, and Friday is the rest day, listed as
-        // Posterior so it falls through the way the personal app's does. Fresh
-        // installs get it from the preset; existing devices from revision 14
-        // (see migrateJessiSplit), once.
+        // Jessi's weekday map. Since revision 16 (Sep 2026) his program is one
+        // Full Body day, trained six days a week with no rest day modelled, so
+        // every weekday is day 1 — the same as the personal app, which has no
+        // weekday map at all. All seven days are listed: an omitted weekday is a
+        // rest day, and getTodayDay() would return null on it. Fresh installs
+        // get this from buildJessiPreset; existing devices from migrateJessiSplit,
+        // which writes it once because the old map names a day 2 that is gone.
         const JESSI_SPLIT_SCHEDULE = [
             { dayOfWeek: 'Monday',    workoutDayNumber: 1 },
-            { dayOfWeek: 'Tuesday',   workoutDayNumber: 2 },
+            { dayOfWeek: 'Tuesday',   workoutDayNumber: 1 },
             { dayOfWeek: 'Wednesday', workoutDayNumber: 1 },
-            { dayOfWeek: 'Thursday',  workoutDayNumber: 2 },
-            { dayOfWeek: 'Friday',    workoutDayNumber: 2 },
+            { dayOfWeek: 'Thursday',  workoutDayNumber: 1 },
+            { dayOfWeek: 'Friday',    workoutDayNumber: 1 },
             { dayOfWeek: 'Saturday',  workoutDayNumber: 1 },
-            { dayOfWeek: 'Sunday',    workoutDayNumber: 2 },
+            { dayOfWeek: 'Sunday',    workoutDayNumber: 1 },
         ];
