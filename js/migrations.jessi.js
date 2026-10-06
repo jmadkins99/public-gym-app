@@ -26,22 +26,22 @@
             {
                 name: 'Full Body',
                 movements: [
-                    { name: 'Tricep Extensions', loadType: 'pin' },
+                    { name: 'Chest Press', id: 'chest-press', startingWeight: '100', loadType: 'plate-two-sided' },
+                    { name: 'Incline Chest Press', loadType: 'plate-two-sided' },
                     { name: 'Lateral Raises', loadType: 'pin' },
+                    { name: 'Frontal Plane Pulldowns', loadType: 'pin' },
+                    { name: 'Tricep Extensions', loadType: 'pin' },
+                    { name: 'Chest Flies', loadType: 'pin' },
                     { name: 'Recline Curls', loadType: 'pin' },
                     // Was Preacher Curls. `actual-` because "Preacher Curls" was
                     // also the June-era name of what is now Recline Curls.
                     { name: 'Shoulder Flexion Curls', id: 'actual-preacher-curls', startingWeight: '50', loadType: 'pin' },
-                    { name: 'Chest Flies', loadType: 'pin' },
-                    { name: 'Chest Press', id: 'chest-press', startingWeight: '100', loadType: 'pin' },
-                    { name: 'Incline Chest Press', loadType: 'pin' },
                     { name: 'Overhead Tricep Extensions', loadType: 'pin' },
                     { name: 'Ab Crunches', loadType: 'pin' },
                     // Was Sagittal Plane Pulldowns.
                     { name: 'Sagittal Plane Pullovers', loadType: 'pin' },
                     { name: 'Kelso Shrugs', loadType: 'plate-one-sided' },
                     { name: 'Transverse Plane Rows', loadType: 'plate-one-sided' },
-                    { name: 'Frontal Plane Pulldowns', loadType: 'plate-one-sided' },
                     { name: 'Shoulder Press', loadType: 'pin' },
                     { name: 'Back Extensions', loadType: 'pin', increment: 5 },
                     { name: 'Leg Press', loadType: 'plate-two-sided', increment: 5 },
@@ -71,6 +71,14 @@
         // (see the stubs at the bottom) and the name-matched first-run branch
         // that identified an unstamped Full Body program as his.
         //
+        // 17 is the Oct 2026 reorder, in step with the personal app's config
+        // version 23: the press pair opens the day, then Lateral Raises,
+        // Frontal Plane Pulldowns and Tricep Extensions. Same 19 movements, so
+        // the bump is the whole delivery. The load-type changes in the table
+        // (both presses to 'plate-two-sided', Frontal Plane Pulldowns to 'pin')
+        // reach a fresh install only. loadType is his, so his phone keeps its
+        // own answers until he changes them in Settings, and that is the plan.
+        //
         // ----------------------------------------------------------------
         // LANDING A CHANGE TO HIS PROGRAM
         // ----------------------------------------------------------------
@@ -87,7 +95,7 @@
         // every crossing. `name`, `loadType` and `increment` are HIS, and ride
         // through untouched; changing one of those on an existing device is a
         // Settings job, not a bump.
-        const JESSI_SPLIT_REVISION = 16;
+        const JESSI_SPLIT_REVISION = 17;
 
         const jessiNorm = (s) => String(s || '').toLowerCase().trim();
 
