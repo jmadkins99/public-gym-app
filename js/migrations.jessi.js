@@ -27,8 +27,8 @@
                 name: 'Full Body',
                 movements: [
                     { name: 'Chest Flies', loadType: 'pin' },
-                    { name: 'Chest Press', id: 'chest-press', startingWeight: '100', loadType: 'plate-two-sided' },
-                    { name: 'Incline Chest Press', loadType: 'plate-two-sided' },
+                    { name: 'Chest Press', id: 'chest-press', startingWeight: '100', loadType: 'pin' },
+                    { name: 'Incline Chest Press', loadType: 'pin' },
                     { name: 'Recline Curls', loadType: 'pin' },
                     // Was Preacher Curls. `actual-` because "Preacher Curls" was
                     // also the June-era name of what is now Recline Curls.
@@ -86,6 +86,15 @@
         // Pullovers. Same 19 movements and no table changes besides order, so
         // the bump is the whole delivery and his phone takes all of it.
         //
+        // 19 is the Oct 2026 load-type reset. Both chest presses go back to
+        // 'pin' in the table (revision 17 had made them 'plate-two-sided'; they
+        // are stacks), and this is the first revision to carry a load-type
+        // change to an existing device rather than to a fresh install only:
+        // see JESSI_LOAD_TYPE_RESET_REVISION below. Every movement in the table
+        // takes the table's load type once, whatever his phone had. Taken from
+        // the personal app's saved config, since he and Josh train on the same
+        // machines. Names, PR steps and the order are untouched.
+        //
         // ----------------------------------------------------------------
         // LANDING A CHANGE TO HIS PROGRAM
         // ----------------------------------------------------------------
@@ -101,8 +110,19 @@
         // Who owns what: `category` and `order` are code-owned and re-derived on
         // every crossing. `name`, `loadType` and `increment` are HIS, and ride
         // through untouched; changing one of those on an existing device is a
-        // Settings job, not a bump.
-        const JESSI_SPLIT_REVISION = 18;
+        // Settings job, not a bump. The one exception is the load-type reset
+        // below.
+        const JESSI_SPLIT_REVISION = 19;
+
+        // A config crossing from below this revision takes JESSI_PROGRAM's
+        // `loadType` for every program movement, overwriting his own answer,
+        // ONCE. After that it is his again: a config already at or past this
+        // revision keeps whatever he sets in Settings through every later bump.
+        // To push the table's load types again, set this to the new
+        // JESSI_SPLIT_REVISION in the same change. It overwrites deliberate
+        // Settings answers too, so only do that when the table is known to be
+        // right for his gym. Names and PR steps have no equivalent.
+        const JESSI_LOAD_TYPE_RESET_REVISION = 19;
 
         const jessiNorm = (s) => String(s || '').toLowerCase().trim();
 
@@ -144,10 +164,12 @@
         // them. Each program movement claims the saved entry with its stable id,
         // else the one with its name — so a Chest Press he renamed keeps its
         // slot. The claimed entry keeps everything he owns; only category and
-        // order are rewritten. A program movement he doesn't have is added only
-        // if it has a stable id (a UUID movement missing from his device is one
-        // he removed). Anything he added himself goes on the end of the last
-        // day, matched by identity, so two with the same name both survive.
+        // order are rewritten, plus loadType once, on a crossing from below
+        // JESSI_LOAD_TYPE_RESET_REVISION. A program movement he doesn't have is
+        // added only if it has a stable id (a UUID movement missing from his
+        // device is one he removed). Anything he added himself goes on the end
+        // of the last day, matched by identity, so two with the same name both
+        // survive.
         function migrateJessiSplit(config, workoutHistory, schedule) {
             if (!config || config.version !== 2 || !config.days) return null;
             if (config.coachPreset && config.coachPreset !== 'jessi') return null;
@@ -166,6 +188,8 @@
                 if (!byName.has(n)) byName.set(n, e);
             }
 
+            const resetLoadTypes = config.splitRevision < JESSI_LOAD_TYPE_RESET_REVISION;
+
             const placed = new Set();
             const dayCount = JESSI_PROGRAM.length;
             const days = {};
@@ -177,7 +201,7 @@
                             : byName.get(jessiNorm(m.name));
                         if (have && !placed.has(have)) {
                             placed.add(have);
-                            return have;
+                            return (resetLoadTypes && m.loadType) ? { ...have, loadType: m.loadType } : have;
                         }
                         if (m.id && !byId.has(m.id)) return newJessiEntry(m);
                         return null;
