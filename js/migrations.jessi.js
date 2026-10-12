@@ -26,12 +26,9 @@
             {
                 name: 'Full Body',
                 movements: [
+                    { name: 'Chest Flies', loadType: 'pin' },
                     { name: 'Chest Press', id: 'chest-press', startingWeight: '100', loadType: 'plate-two-sided' },
                     { name: 'Incline Chest Press', loadType: 'plate-two-sided' },
-                    { name: 'Lateral Raises', loadType: 'pin' },
-                    { name: 'Frontal Plane Pulldowns', loadType: 'pin' },
-                    { name: 'Tricep Extensions', loadType: 'pin' },
-                    { name: 'Chest Flies', loadType: 'pin' },
                     { name: 'Recline Curls', loadType: 'pin' },
                     // Was Preacher Curls. `actual-` because "Preacher Curls" was
                     // also the June-era name of what is now Recline Curls.
@@ -40,6 +37,9 @@
                     { name: 'Ab Crunches', loadType: 'pin' },
                     // Was Sagittal Plane Pulldowns.
                     { name: 'Sagittal Plane Pullovers', loadType: 'pin' },
+                    { name: 'Lateral Raises', loadType: 'pin' },
+                    { name: 'Frontal Plane Pulldowns', loadType: 'pin' },
+                    { name: 'Tricep Extensions', loadType: 'pin' },
                     { name: 'Kelso Shrugs', loadType: 'plate-one-sided' },
                     { name: 'Transverse Plane Rows', loadType: 'plate-one-sided' },
                     { name: 'Shoulder Press', loadType: 'pin' },
@@ -79,6 +79,13 @@
         // reach a fresh install only. loadType is his, so his phone keeps its
         // own answers until he changes them in Settings, and that is the plan.
         //
+        // 18 is the second Oct 2026 reorder, in step with the personal app's
+        // config version 24, and nothing but a reorder: Chest Flies opens the
+        // day ahead of the press pair, and Lateral Raises, Frontal Plane
+        // Pulldowns and Tricep Extensions move down behind Sagittal Plane
+        // Pullovers. Same 19 movements and no table changes besides order, so
+        // the bump is the whole delivery and his phone takes all of it.
+        //
         // ----------------------------------------------------------------
         // LANDING A CHANGE TO HIS PROGRAM
         // ----------------------------------------------------------------
@@ -95,7 +102,7 @@
         // every crossing. `name`, `loadType` and `increment` are HIS, and ride
         // through untouched; changing one of those on an existing device is a
         // Settings job, not a bump.
-        const JESSI_SPLIT_REVISION = 17;
+        const JESSI_SPLIT_REVISION = 18;
 
         const jessiNorm = (s) => String(s || '').toLowerCase().trim();
 
