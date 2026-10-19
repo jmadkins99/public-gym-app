@@ -38,6 +38,33 @@
         const RAIL_MS = 300;
         const PR_CELEBRATION_MS = 2000;
 
+        // The History ⏱️'s live total, pinned above the card for the whole of
+        // an unsubmitted day. getSessionTiming returns null until something is
+        // logged, so opening cards alone shows nothing — but the first LOG
+        // reveals a clock that already counts from that card's opening swipe.
+        // It ticks in its own component so the deck and its three mounted
+        // cards are not re-rendered every second; recomputed from the clock
+        // rather than counted up, so a phone that slept is right on waking.
+        function SessionClock({ workout, foregroundAt }) {
+            const [now, setNow] = React.useState(() => new Date());
+            React.useEffect(() => {
+                const id = setInterval(() => setNow(new Date()), 1000);
+                return () => clearInterval(id);
+            }, []);
+
+            const timing = getSessionTiming(workout, foregroundAt, now);
+            if (!timing) return null;
+            return (
+                <div className="session-clock" data-session-clock>
+                    <span data-session-clock-total>
+                        {formatDuration(timing.totalSeconds)
+                            + (timing.live ? ` ${timing.totalSeconds % 60}s` : '')}
+                    </span>
+                    <span className="session-clock-label">at the gym</span>
+                </div>
+            );
+        }
+
         function SwipeDeck({ workoutData, loggedExercises, handleInputChange, getPreviousWorkout,
                              logExercise, completeDay, getCurrentExercises,
                              workoutHistory, expandedWeightBreakdown, openWeightBreakdown,
@@ -406,6 +433,11 @@
             });
             const doneCount = exercises.filter((ex) => loggedExercises[ex.id]).length;
             const timing = todayWorkout ? getSessionTiming(todayWorkout, foregroundAt) : null;
+            // A submitted day is over, so only an unsubmitted one gets the clock.
+            const liveWorkout = workoutHistory.find((w) => {
+                const d = new Date(w.date); d.setHours(0, 0, 0, 0);
+                return d.getTime() === today.getTime() && !w.submitted;
+            });
 
             const renderFinish = () => (
                 <div className="card card-finish">
@@ -479,8 +511,10 @@
                         program is N numbered days whose display names come from
                         the client's own roster, so this is the same pill row over
                         `totalWorkoutDays` — reusing the day-selector labelling
-                        rather than inventing a second source for it. A one-day
-                        program renders a single full-width pill. */}
+                        rather than inventing a second source for it. Only when
+                        there is a choice to make: a one-day program renders no
+                        toggle at all, as in the personal app. */}
+                    {totalWorkoutDays > 1 && (
                     <div className="day-toggle" data-day-type-toggle>
                         {Array.from({ length: totalWorkoutDays }, (_, i) => i + 1).map((dayNum) => (
                             <button
@@ -493,6 +527,9 @@
                             </button>
                         ))}
                     </div>
+                    )}
+
+                    {liveWorkout && <SessionClock workout={liveWorkout} foregroundAt={foregroundAt} />}
 
                     <div
                         className="deck-stage"

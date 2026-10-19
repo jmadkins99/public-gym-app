@@ -27,6 +27,8 @@
             const [workoutHistory, setWorkoutHistory] = useState([]);
             const [showSuccess, setShowSuccess] = useState(false);
             const [successMessage, setSuccessMessage] = useState('');
+            // Gold toast for a PR log, matching the card's celebration.
+            const [successIsPR, setSuccessIsPR] = useState(false);
             const [exercisesByDay, setExercisesByDay] = useState({});
             const [schedule, setSchedule] = useState(null);
             const [exerciseCategories, setExerciseCategories] = useState([]);
@@ -987,6 +989,7 @@
                 });
 
                 setSuccessMessage('Exercise logged!');
+                setSuccessIsPR(isPR);
                 setShowSuccess(true);
                 setTimeout(() => setShowSuccess(false), 2000);
 
@@ -1107,6 +1110,7 @@
                 setWorkoutHistory(updatedHistory);
                 window.repo.saveHistory(updatedHistory);
                 setSuccessMessage('Workout updated!');
+                setSuccessIsPR(false);
                 setShowSuccess(true);
                 setTimeout(() => setShowSuccess(false), 2000);
             };
@@ -1193,6 +1197,7 @@
                         }
 
                         setSuccessMessage('Data imported successfully!');
+                        setSuccessIsPR(false);
                         setShowSuccess(true);
                         setTimeout(() => setShowSuccess(false), 3000);
                         setShowSettings(false);
@@ -1321,7 +1326,7 @@
                             </button>
                         </div>
                     )}
-                    {showSuccess && <div className={`success-message ${showBackupReminder ? 'backup-reminder' : ''}`}>{successMessage}</div>}
+                    {showSuccess && <div className={`success-message ${showBackupReminder ? 'backup-reminder' : ''} ${successIsPR ? 'pr-toast' : ''}`}>{successMessage}</div>}
 
                     {showBackupReminder && (
                         <BackupReminderModal
