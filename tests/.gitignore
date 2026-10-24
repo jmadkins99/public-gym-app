@@ -1,0 +1,4 @@
+node_modules/
+package-lock.json
+# Test map: rebuilt by every run (lib/coverage.js), never committed
+.coverage/
