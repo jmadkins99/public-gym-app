@@ -214,6 +214,22 @@
             prRepFloor = Number.isFinite(min) ? min : null;
         }
 
+        // The reps dropdown for one exercise, or null to type reps freely.
+        // Every client gets one since Oct 2026, driven by the exercise's own
+        // rep range, the personal app's rule: one below min reps (the
+        // failed-set bottom) up to max reps, so 8-12 offers 7 to 12. An
+        // exercise whose range Settings left unusable (blank, 0, max below
+        // min) falls back to the client's repsDropdown (Jessi and Ian), or to
+        // free typing for everyone else.
+        function getRepsDropdownRange(exercise, repsDropdown) {
+            const minReps = Number(exercise && exercise.minReps);
+            const maxReps = Number(exercise && exercise.maxReps);
+            if (Number.isInteger(minReps) && Number.isInteger(maxReps) && minReps >= 2 && minReps <= maxReps) {
+                return { min: minReps - 1, max: maxReps };
+            }
+            return repsDropdown || null;
+        }
+
         // A weighted set that bottomed out the reps dropdown. The bottom value
         // is not a target anyone trains for — it is the number you log when
         // the set died — so loading more weight and failing on it is a failed
@@ -227,10 +243,17 @@
         // baseline for the next one, so coming back and getting one more rep at
         // that weight is a real improvement. A client with no dropdown has no
         // floor, and cardio and bodyweight rows never reach this check.
+        //
+        // Each set is judged by the bottom it was LOGGED under, which
+        // logExercise stamps as repsFloor, so editing an exercise's rep range
+        // never rewrites old PR badges or streaks. A set from before the stamp
+        // keeps the client's dropdown bottom, the only floor that existed then.
         function isFailedSet(entry) {
-            if (prRepFloor === null || !entry) return false;
+            if (!entry) return false;
+            const floor = Number.isInteger(entry.repsFloor) ? entry.repsFloor : prRepFloor;
+            if (floor === null) return false;
             const reps = parsePositiveInt(entry.reps);
-            return reps !== null && reps <= prRepFloor;
+            return reps !== null && reps <= floor;
         }
 
         function isImprovement(newer, older, kind = getPRKind(newer)) {

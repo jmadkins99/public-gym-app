@@ -124,9 +124,10 @@ const NEWER = {
             const w = document.querySelector(sel + ' input[type="number"][inputmode="decimal"]');
             Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(w, '105');
             w.dispatchEvent(new Event('input', { bubbles: true }));
-            const r = document.querySelector(sel + ' input[type="number"][inputmode="numeric"]');
-            Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(r, '6');
-            r.dispatchEvent(new Event('input', { bubbles: true }));
+            // Every client's reps field is a dropdown since Oct 2026.
+            const r = document.querySelector(sel + ' select[data-field="reps"]');
+            Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set.call(r, '6');
+            r.dispatchEvent(new Event('change', { bubbles: true }));
         }, ACTIVE);
         await new Promise(r => setTimeout(r, 120));
         ok(await logCard(page, { settle: 250, waitForAutoAdvance: false }), 'logged Chest Press 105 x 6');

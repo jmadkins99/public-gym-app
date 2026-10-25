@@ -853,6 +853,9 @@
                         maxReps: exercise.maxReps
                     };
                 } else {
+                    // The dropdown bottom the set was done under, so isFailedSet
+                    // judges it by that even after the rep range changes.
+                    const repsRange = getRepsDropdownRange(exercise, repsDropdown);
                     exerciseToSave = {
                         id: exercise.id,
                         name: exercise.name,
@@ -861,7 +864,8 @@
                         weight: finalData.weight || '',
                         reps: finalData.reps || '',
                         minReps: exercise.minReps,
-                        maxReps: exercise.maxReps
+                        maxReps: exercise.maxReps,
+                        ...(repsRange ? { repsFloor: repsRange.min } : {})
                     };
                 }
 
@@ -1376,6 +1380,7 @@
                             }}
                             onSave={updateWorkout}
                             exercisesByDay={exercisesByDay}
+                            repsDropdown={repsDropdown}
                         />
                     )}
 

@@ -524,22 +524,25 @@
                 return previous?.reps || '';
             })();
 
-            // Reps dropdown (Jessi: 5-9), parity with the personal app's 3-6
-            // dropdown. Unlike the free-type field this ALWAYS has a value
-            // selected, so a one-tap LOG records it. After a weight bump the
+            // Reps dropdown, parity with the personal app's per-exercise
+            // dropdown: one below min reps up to max reps, see
+            // getRepsDropdownRange. Unlike the free-type field this ALWAYS has
+            // a value selected, so a one-tap LOG records it. After a weight
+            // bump (the minimalist PR, or prTracking's "Strength Gains") the
             // target resets to the bottom of the goal range for the new
             // heavier load; otherwise last session's reps carry over, clamped
             // into the dropdown range. First-ever session falls back the same
-            // way. The range bounds themselves never feed the PR logic.
-            const repsDropdownOptions = repsDropdown
-                ? Array.from({ length: repsDropdown.max - repsDropdown.min + 1 },
-                             (_, i) => String(repsDropdown.min + i))
+            // way. Only the bottom feeds the PR logic (isFailedSet).
+            const repsRange = getRepsDropdownRange(exercise, repsDropdown);
+            const repsDropdownOptions = repsRange
+                ? Array.from({ length: repsRange.max - repsRange.min + 1 },
+                             (_, i) => String(repsRange.min + i))
                 : null;
             const repsDropdownDefault = (() => {
-                if (!repsDropdown) return '';
-                const clamp = (n) => String(Math.min(repsDropdown.max, Math.max(repsDropdown.min, n)));
-                const fallback = clamp(exercise.minReps || repsDropdown.min);
-                if (minimalistPR) return fallback;
+                if (!repsRange) return '';
+                const clamp = (n) => String(Math.min(repsRange.max, Math.max(repsRange.min, n)));
+                const fallback = clamp(exercise.minReps || repsRange.min);
+                if (minimalistPR || prRecommendation?.type === 'strength') return fallback;
                 const prev = parseInt(previous?.reps);
                 return isNaN(prev) ? fallback : clamp(prev);
             })();
