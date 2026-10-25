@@ -22,9 +22,10 @@
 //      against a visibly filled field.
 //   5. Goal range is untouched: logged entries still carry maxReps 8.
 //   6. A one-day "Full Body" program WITHOUT the setting — Grace's shape —
-//      keeps the free-type number input, and loading never adds a dropdown.
-//      Until Sep 2026 a local one-shot (enableRepsDropdownForJessi) forced
-//      one onto any config shaped like Jessi's, Grace's included; it is gone.
+//      still gets the dropdown, from its own 6-8 range (every client does
+//      since Oct 2026), and loading never writes a repsDropdown into its
+//      config. Until Sep 2026 a local one-shot (enableRepsDropdownForJessi)
+//      forced the setting onto any config shaped like Jessi's; it is gone.
 //
 // To verify this is real: delete the `if (!data.reps)` capture block from
 // logExercise — assertion 4 fails (reps never persist on a one-tap LOG).
@@ -167,11 +168,11 @@ async function readReps(page, name) {
         await waitForApp(page);
 
         const other = await readReps(page, 'Chest Flies');
-        ok(other && other.isFreeType, 'a Full Body program without the setting keeps the free-type number input');
-        ok(!other.isSelect, 'and has no reps <select>');
+        ok(other && other.isSelect, 'a Full Body program without the setting gets the dropdown from its own range');
+        eq(other.options, ['5', '6', '7', '8'], 'its 6-8 range offers 5-8');
         const added = await page.evaluate(() =>
             JSON.parse(localStorage.getItem('gym-local:gymExerciseConfig')).repsDropdown);
-        eq(added, undefined, 'and loading never added a repsDropdown to it');
+        eq(added, undefined, 'and loading never wrote a repsDropdown into its config');
 
         eq(errors, [], 'no console errors during load');
         console.log('PASS: Jessi gets a 5-8 reps dropdown; goal range and PR trigger unchanged.');

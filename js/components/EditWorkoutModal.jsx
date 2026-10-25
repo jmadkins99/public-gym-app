@@ -1,6 +1,6 @@
         const { useState, useEffect, useRef, useMemo } = React;
 
-        function EditWorkoutModal({ workout, onClose, onSave, exercisesByDay }) {
+        function EditWorkoutModal({ workout, onClose, onSave, exercisesByDay, repsDropdown }) {
             const [editedExercises, setEditedExercises] = useState(workout.exercises);
             // Fall back to the workout's own exercises for legacy days whose config has
             // been removed (e.g. Jessi's old Day 3 after the AP migration).
@@ -24,14 +24,19 @@
                         // dropping the edit. Mirrors the personal app.
                         const def = allExercises.find(e => e.id === exerciseId);
                         if (def) {
+                            // Stamped like logExercise does, so isFailedSet
+                            // judges an added set by the range in force.
+                            const type = def.type || (def.typeId === 'cardio' ? 'cardio' : 'standard');
+                            const repsRange = type === 'standard' ? getRepsDropdownRange(def, repsDropdown) : null;
                             updated.push({
                                 id: def.id,
                                 name: def.name,
                                 category: def.category,
-                                type: def.type || (def.typeId === 'cardio' ? 'cardio' : 'standard'),
+                                type,
                                 ...(def.isCardio ? { isCardio: true } : {}),
                                 ...(def.minReps !== undefined ? { minReps: def.minReps } : {}),
                                 ...(def.maxReps !== undefined ? { maxReps: def.maxReps } : {}),
+                                ...(repsRange ? { repsFloor: repsRange.min } : {}),
                                 [field]: value
                             });
                         }
